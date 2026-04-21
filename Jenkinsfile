@@ -21,13 +21,27 @@ pipeline {
         sh '''#!/usr/bin/env bash
 set -euo pipefail
 
-GO_ROOT="$HOME/toolcache/go-${GO_VERSION}"
+host_arch="$(uname -m)"
+case "$host_arch" in
+  x86_64|amd64)
+    GO_ARCH="amd64"
+    ;;
+  aarch64|arm64)
+    GO_ARCH="arm64"
+    ;;
+  *)
+    echo "Unsupported host arch: $host_arch" >&2
+    exit 1
+    ;;
+esac
+
+GO_ROOT="$HOME/toolcache/go-${GO_VERSION}-${GO_ARCH}"
 
 if [ ! -x "$GO_ROOT/bin/go" ]; then
   mkdir -p "$(dirname "$GO_ROOT")"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT
-  curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o "$tmpdir/go.tgz"
+  curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o "$tmpdir/go.tgz"
   tar -C "$tmpdir" -xzf "$tmpdir/go.tgz"
   rm -rf "$GO_ROOT"
   mv "$tmpdir/go" "$GO_ROOT"
@@ -43,11 +57,26 @@ fi
         sh '''#!/usr/bin/env bash
 set -euo pipefail
 
-export GOROOT="$HOME/toolcache/go-${GO_VERSION}"
+host_arch="$(uname -m)"
+case "$host_arch" in
+  x86_64|amd64)
+    GO_ARCH="amd64"
+    ;;
+  aarch64|arm64)
+    GO_ARCH="arm64"
+    ;;
+  *)
+    echo "Unsupported host arch: $host_arch" >&2
+    exit 1
+    ;;
+esac
+
+export GOROOT="$HOME/toolcache/go-${GO_VERSION}-${GO_ARCH}"
 export PATH="$GOROOT/bin:$PATH"
 export GOTOOLCHAIN=local
 export GOCACHE="$HOME/.cache/go-build"
 export GOMODCACHE="$HOME/.cache/go-mod"
+export GOPROXY="${GOPROXY:-https://proxy.golang.org,direct}"
 
 go test ./...
 '''
@@ -59,11 +88,26 @@ go test ./...
         sh '''#!/usr/bin/env bash
 set -euo pipefail
 
-export GOROOT="$HOME/toolcache/go-${GO_VERSION}"
+host_arch="$(uname -m)"
+case "$host_arch" in
+  x86_64|amd64)
+    GO_ARCH="amd64"
+    ;;
+  aarch64|arm64)
+    GO_ARCH="arm64"
+    ;;
+  *)
+    echo "Unsupported host arch: $host_arch" >&2
+    exit 1
+    ;;
+esac
+
+export GOROOT="$HOME/toolcache/go-${GO_VERSION}-${GO_ARCH}"
 export PATH="$GOROOT/bin:$PATH"
 export GOTOOLCHAIN=local
 export GOCACHE="$HOME/.cache/go-build"
 export GOMODCACHE="$HOME/.cache/go-mod"
+export GOPROXY="${GOPROXY:-https://proxy.golang.org,direct}"
 
 rm -rf dist
 mkdir -p dist
