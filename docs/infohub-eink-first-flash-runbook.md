@@ -157,6 +157,9 @@ Stage 2 再验证这些业务目标：
 3. Home Assistant 能发现并接管设备
 4. 之后改走 OTA，而不是重复 USB 刷机
 
+如果你想继续确认这块屏是否支持硬件级局部刷新，建议不要直接在业务 YAML 上冒险，先刷独立探针：
+[reTerminal E1001 局部刷新验证方案](/Users/cyan/code/collect-server/docs/infohub-eink-partial-refresh-probe.md)
+
 ## 6. 常见故障怎么切分
 
 ### A. 编译拿不到 `factory` 固件

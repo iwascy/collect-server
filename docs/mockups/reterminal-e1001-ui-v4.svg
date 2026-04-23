@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="960" viewBox="0 0 1600 960">
+  <defs>
+    <style>
+      .bg { fill: #f0ede6; }
+      .frame { fill: #f5f3ec; stroke: #222; stroke-width: 3; }
+      .card { fill: none; stroke: #222; stroke-width: 2; }
+      .divider { stroke: #222; stroke-width: 1.5; opacity: 0.5; }
+      .header-title { font: 700 46px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .header-time { font: 500 30px "Noto Sans SC", "PingFang SC", sans-serif; fill: #444; }
+      .card-label { font: 500 32px "Noto Sans SC", "PingFang SC", sans-serif; fill: #666; }
+      .card-num { font: 700 100px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; letter-spacing: -2px; }
+      .card-cost { font: 500 26px "Noto Sans SC", "PingFang SC", sans-serif; fill: #555; }
+      .card-alert { font: 600 26px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .quota-title { font: 700 32px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .quota-sub { font: 500 24px "Noto Sans SC", "PingFang SC", sans-serif; fill: #666; }
+      .quota-metric { font: 700 34px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .system-title { font: 700 32px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .system-text { font: 600 28px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .system-detail { font: 500 24px "Noto Sans SC", "PingFang SC", sans-serif; fill: #555; }
+      .badge-filled { fill: #111; }
+      .badge-outline { fill: none; stroke: #222; stroke-width: 2; }
+      .badge-text-light { font: 700 24px "Noto Sans SC", "PingFang SC", sans-serif; fill: #f5f3ec; }
+      .badge-text-dark { font: 700 24px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .progress-track { fill: none; stroke: #bbb; stroke-width: 2; }
+      .progress-bar { fill: #333; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1600" height="960"/>
+  <rect class="frame" x="18" y="18" width="1564" height="924" rx="10"/>
+
+  <!-- ===== HEADER ===== -->
+  <rect class="card" x="36" y="34" width="1528" height="68" rx="8"/>
+  <text class="header-title" x="56" y="80">InfoHub</text>
+  <text class="header-time" x="640" y="78">2026-04-23 14:20</text>
+  <rect class="badge-filled" x="1374" y="42" width="172" height="44" rx="22"/>
+  <text class="badge-text-light" x="1416" y="72">状态 正常</text>
+
+  <!-- ===== OVERVIEW: 3 CARDS ===== -->
+  <!-- Claude -->
+  <rect class="card" x="36" y="118" width="496" height="230"/>
+  <text class="card-label" x="60" y="156">Claude</text>
+  <text class="card-num" x="60" y="272">2.9M</text>
+  <line class="divider" x1="60" y1="286" x2="508" y2="286"/>
+  <text class="card-cost" x="60" y="316">$0.00</text>
+
+  <!-- Sub2API -->
+  <rect class="card" x="552" y="118" width="496" height="230"/>
+  <text class="card-label" x="576" y="156">Sub2API</text>
+  <text class="card-num" x="576" y="272">33.6M</text>
+  <line class="divider" x1="576" y1="286" x2="1024" y2="286"/>
+  <text class="card-cost" x="576" y="316">$13.66</text>
+
+  <!-- 合计 -->
+  <rect class="card" x="1068" y="118" width="496" height="230"/>
+  <text class="card-label" x="1092" y="156">合计</text>
+  <text class="card-num" x="1092" y="272">33.6M</text>
+  <line class="divider" x1="1092" y1="286" x2="1540" y2="286"/>
+  <text class="card-cost" x="1092" y="316">$13.66</text>
+  <text class="card-alert" x="1540" y="316" text-anchor="end">告警 1</text>
+
+  <!-- ===== QUOTA: Claude ===== -->
+  <rect class="card" x="36" y="366" width="1012" height="270"/>
+  <text class="quota-title" x="60" y="404">Claude 配额</text>
+  <rect class="badge-outline" x="868" y="378" width="152" height="38" rx="19"/>
+  <text class="badge-text-dark" x="916" y="404">正常</text>
+
+  <!-- 5H -->
+  <text class="quota-metric" x="60" y="468">5H</text>
+  <text class="quota-metric" x="430" y="468" text-anchor="end">--</text>
+  <rect class="progress-track" x="60" y="484" width="380" height="18" rx="9"/>
+  <rect class="progress-bar" x="62" y="486" width="376" height="14" rx="7"/>
+
+  <line class="divider" x1="490" y1="436" x2="490" y2="516"/>
+
+  <!-- Week -->
+  <text class="quota-metric" x="540" y="468">Week</text>
+  <text class="quota-metric" x="992" y="468" text-anchor="end">--</text>
+  <rect class="progress-track" x="540" y="484" width="460" height="18" rx="9"/>
+  <rect class="progress-bar" x="542" y="486" width="456" height="14" rx="7"/>
+
+  <!-- ===== QUOTA: Sub2API ===== -->
+  <rect class="card" x="36" y="652" width="1012" height="276"/>
+  <text class="quota-title" x="60" y="690">Sub2API 配额</text>
+  <text class="quota-sub" x="60" y="720">5H 重置: 2026-04-23 15:07</text>
+  <rect class="badge-filled" x="868" y="664" width="152" height="38" rx="19"/>
+  <text class="badge-text-light" x="912" y="690">告急</text>
+
+  <!-- 5H -->
+  <text class="quota-metric" x="60" y="784">5H</text>
+  <text class="quota-metric" x="430" y="784" text-anchor="end">5%</text>
+  <rect class="progress-track" x="60" y="800" width="380" height="18" rx="9"/>
+  <rect class="progress-bar" x="62" y="802" width="19" height="14" rx="7"/>
+
+  <line class="divider" x1="490" y1="752" x2="490" y2="832"/>
+
+  <!-- Week -->
+  <text class="quota-metric" x="540" y="784">Week</text>
+  <text class="quota-metric" x="992" y="784" text-anchor="end">37%</text>
+  <rect class="progress-track" x="540" y="800" width="460" height="18" rx="9"/>
+  <rect class="progress-bar" x="542" y="802" width="170" height="14" rx="7"/>
+
+  <!-- ===== SYSTEM PANEL ===== -->
+  <rect class="card" x="1068" y="366" width="496" height="562"/>
+  <text class="system-title" x="1100" y="404">告警与系统</text>
+  <rect class="badge-filled" x="1100" y="424" width="132" height="36" rx="18"/>
+  <text class="badge-text-light" x="1126" y="450">重点告警</text>
+
+  <text class="system-text" x="1100" y="516">1. admin10010</text>
+  <text class="system-text" x="1100" y="558">5H 余量仅 5%</text>
+
+  <line class="divider" x1="1100" y1="780" x2="1532" y2="780"/>
+  <circle cx="1118" cy="816" r="10" fill="none" stroke="#555" stroke-width="2"/>
+  <text class="system-detail" x="1148" y="824">刷新周期 300s</text>
+</svg>

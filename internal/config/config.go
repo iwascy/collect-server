@@ -17,7 +17,7 @@ const (
 	defaultReadTimeoutSeconds     = 10
 	defaultWriteTimeoutSeconds    = 10
 	defaultShutdownTimeoutSeconds = 10
-	defaultStoreType              = "memory"
+	defaultStoreType              = "sqlite"
 	defaultSQLitePath             = "./data/infohub.db"
 	defaultLogLevel               = "info"
 	defaultCollectorTimeout       = 15

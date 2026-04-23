@@ -557,7 +557,7 @@ func (h *Handler) EInkDeviceData(w http.ResponseWriter, r *http.Request) {
 }
 
 func buildEInkDashboardPage(snapshots map[string]model.SourceSnapshot, refreshSeconds int) einkDashboardPage {
-	updatedAtUnix := maxLastFetch(snapshots)
+	updatedAtUnix := maxSnapshotDataUpdatedAt(snapshots)
 	claudeOverview, claudeTable, claudeCritical, claudeAlerts := buildSourceDashboard("claude_relay", "Claude Relay 今日概览", snapshots["claude_relay"])
 	subOverview, subTable, subCritical, subAlerts := buildSourceDashboard("sub2api", "Sub2API 今日概览", snapshots["sub2api"])
 
@@ -581,7 +581,7 @@ func buildEInkDashboardPage(snapshots map[string]model.SourceSnapshot, refreshSe
 }
 
 func buildEInkDevicePayload(snapshots map[string]model.SourceSnapshot, refreshSeconds int) einkDevicePayload {
-	updatedAtUnix := maxLastFetch(snapshots)
+	updatedAtUnix := maxSnapshotDataUpdatedAt(snapshots)
 	claudeOverview, claudeTable, _, claudeAlerts := buildSourceDashboard("claude_relay", "Claude Relay 今日概览", snapshots["claude_relay"])
 	subOverview, subTable, _, subAlerts := buildSourceDashboard("sub2api", "Sub2API 今日概览", snapshots["sub2api"])
 
@@ -658,7 +658,7 @@ func buildSourceDashboard(sourceKey string, title string, snapshot model.SourceS
 		Title: dashboardTableTitle(sourceKey),
 	}
 
-	if strings.EqualFold(snapshot.Status, "error") {
+	if strings.EqualFold(snapshot.Status, "error") && len(snapshot.Items) == 0 {
 		message := strings.TrimSpace(snapshot.Error)
 		if message == "" {
 			message = "最近一次采集失败"
@@ -704,6 +704,30 @@ func buildSourceDashboard(sourceKey string, title string, snapshot model.SourceS
 	}
 
 	return overview, table, criticalCount, alerts
+}
+
+func maxSnapshotDataUpdatedAt(snapshots map[string]model.SourceSnapshot) int64 {
+	var updatedAt int64
+	for _, snapshot := range snapshots {
+		candidate := snapshotDataUpdatedAt(snapshot)
+		if candidate > updatedAt {
+			updatedAt = candidate
+		}
+	}
+	return updatedAt
+}
+
+func snapshotDataUpdatedAt(snapshot model.SourceSnapshot) int64 {
+	var updatedAt int64
+	for _, item := range snapshot.Items {
+		if item.FetchedAt > updatedAt {
+			updatedAt = item.FetchedAt
+		}
+	}
+	if updatedAt > 0 {
+		return updatedAt
+	}
+	return snapshot.LastFetch
 }
 
 func buildTotalOverview(claude sourceOverview, sub sourceOverview, criticalCount int) einkOverviewCard {

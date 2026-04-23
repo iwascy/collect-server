@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"infohub/internal/collector"
 	"infohub/internal/model"
@@ -532,6 +533,85 @@ func TestEInkDeviceDataReturnsCompactPayload(t *testing.T) {
 	}
 	if len(payload.Alerts) != 1 || payload.Alerts[0] != "admin10010：5H 余量仅 56%" {
 		t.Fatalf("unexpected alerts: %+v", payload.Alerts)
+	}
+}
+
+func TestEInkDeviceDataKeepsLastSuccessfulSnapshotOnCollectorFailure(t *testing.T) {
+	dataStore := store.NewMemoryStore()
+	mustSaveSnapshot(t, dataStore, "sub2api", []model.DataItem{
+		{
+			Source:    "sub2api",
+			Category:  "token_usage",
+			Title:     "今日 Token 用量",
+			Value:     "24854435",
+			FetchedAt: 1776766339,
+			Extra: map[string]any{
+				"daily_cost":       13.55,
+				"daily_requests":   394,
+				"enabled_accounts": 5,
+			},
+		},
+		{
+			Source:    "sub2api",
+			Category:  "quota",
+			Title:     "账号 admin10010 5H 额度",
+			Value:     "56%",
+			FetchedAt: 1776766339,
+			Extra: map[string]any{
+				"remaining_percent": 56,
+				"window":            "5H",
+			},
+		},
+		{
+			Source:    "sub2api",
+			Category:  "quota",
+			Title:     "账号 admin10010 Week 额度",
+			Value:     "92%",
+			FetchedAt: 1776766339,
+			Extra: map[string]any{
+				"remaining_percent": 92,
+				"window":            "Week",
+			},
+		},
+	})
+	if err := dataStore.SaveFailure("sub2api", context.DeadlineExceeded, time.Unix(1776767000, 0)); err != nil {
+		t.Fatalf("save failure failed: %v", err)
+	}
+
+	handler := NewHandler(dataStore, collector.NewRegistry(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/dashboard/eink/device.json?refresh=180", nil)
+	rec := httptest.NewRecorder()
+	handler.EInkDeviceData(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: %d", rec.Code)
+	}
+
+	var payload struct {
+		UpdatedAtUnix int64 `json:"updated_at_unix"`
+		Sub2API       struct {
+			Value    string `json:"value"`
+			Requests int    `json:"requests"`
+			Cost     string `json:"cost"`
+			Enabled  int    `json:"enabled"`
+		} `json:"sub2api"`
+		Sub2APIRows []struct {
+			Account string `json:"account"`
+			Status  string `json:"status"`
+		} `json:"sub2api_rows"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response failed: %v", err)
+	}
+
+	if payload.UpdatedAtUnix != 1776766339 {
+		t.Fatalf("unexpected updated_at_unix: %d", payload.UpdatedAtUnix)
+	}
+	if payload.Sub2API.Value != "24,854,435" || payload.Sub2API.Requests != 394 || payload.Sub2API.Cost != "13.55" || payload.Sub2API.Enabled != 5 {
+		t.Fatalf("unexpected cached sub2api payload: %+v", payload.Sub2API)
+	}
+	if len(payload.Sub2APIRows) != 1 || payload.Sub2APIRows[0].Account != "admin10010" || payload.Sub2APIRows[0].Status != "关注" {
+		t.Fatalf("unexpected cached sub2api rows: %+v", payload.Sub2APIRows)
 	}
 }
 

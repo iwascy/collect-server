@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" viewBox="0 0 800 480">
+  <defs>
+    <style>
+      .bg { fill: #f0ede6; }
+      .frame { fill: #f5f3ec; stroke: #222; stroke-width: 1.5; }
+      .card { fill: none; stroke: #222; stroke-width: 1; }
+      .divider { stroke: #222; stroke-width: 0.75; opacity: 0.5; }
+      .header-title { font: 700 23px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .header-time { font: 500 15px "Noto Sans SC", "PingFang SC", sans-serif; fill: #444; }
+      .card-label { font: 500 16px "Noto Sans SC", "PingFang SC", sans-serif; fill: #666; }
+      .card-num { font: 700 50px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; letter-spacing: -1px; }
+      .card-cost { font: 500 13px "Noto Sans SC", "PingFang SC", sans-serif; fill: #555; }
+      .card-alert { font: 600 13px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .quota-title { font: 700 16px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .quota-sub { font: 500 12px "Noto Sans SC", "PingFang SC", sans-serif; fill: #666; }
+      .quota-metric { font: 700 17px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .system-title { font: 700 16px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .system-text { font: 600 14px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .system-detail { font: 500 12px "Noto Sans SC", "PingFang SC", sans-serif; fill: #555; }
+      .badge-filled { fill: #111; }
+      .badge-outline { fill: none; stroke: #222; stroke-width: 1; }
+      .badge-text-light { font: 700 12px "Noto Sans SC", "PingFang SC", sans-serif; fill: #f5f3ec; }
+      .badge-text-dark { font: 700 12px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .progress-track { fill: none; stroke: #bbb; stroke-width: 1; }
+      .progress-bar { fill: #333; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="800" height="480"/>
+  <rect class="frame" x="9" y="9" width="782" height="462" rx="5"/>
+
+  <rect class="card" x="18" y="17" width="764" height="34" rx="4"/>
+  <text class="header-title" x="28" y="40">InfoHub</text>
+  <text class="header-time" x="320" y="39">2026-04-23 14:20</text>
+  <rect class="badge-filled" x="687" y="21" width="86" height="22" rx="11"/>
+  <text class="badge-text-light" x="708" y="36">状态 正常</text>
+
+  <rect class="card" x="18" y="58" width="248" height="124"/>
+  <text class="card-label" x="30" y="77">Claude</text>
+  <text class="card-num" x="30" y="139">2.9M</text>
+  <line class="divider" x1="30" y1="149" x2="254" y2="149"/>
+  <text class="card-cost" x="30" y="164">$0.00</text>
+
+  <rect class="card" x="276" y="58" width="248" height="124"/>
+  <text class="card-label" x="288" y="77">Codex</text>
+  <text class="card-num" x="288" y="139">33.6M</text>
+  <line class="divider" x1="288" y1="149" x2="512" y2="149"/>
+  <text class="card-cost" x="288" y="164">$13.66</text>
+
+  <rect class="card" x="534" y="58" width="248" height="124"/>
+  <text class="card-label" x="546" y="77">合计</text>
+  <text class="card-num" x="546" y="139">33.6M</text>
+  <line class="divider" x1="546" y1="149" x2="770" y2="149"/>
+  <text class="card-cost" x="546" y="164">$13.66</text>
+  <text class="card-alert" x="770" y="164" text-anchor="end">告警 1</text>
+
+  <rect class="card" x="18" y="189" width="506" height="135"/>
+  <text class="quota-title" x="30" y="208">Claude 配额</text>
+  <rect class="badge-outline" x="434" y="195" width="76" height="19" rx="9.5"/>
+  <text class="badge-text-dark" x="458" y="208">正常</text>
+  <text class="quota-metric" x="30" y="240">5H</text>
+  <text class="quota-metric" x="215" y="240" text-anchor="end">--</text>
+  <rect class="progress-track" x="30" y="248" width="190" height="9" rx="4.5"/>
+  <rect class="progress-bar" x="31" y="249" width="188" height="7" rx="3.5"/>
+  <line class="divider" x1="245" y1="224" x2="245" y2="264"/>
+  <text class="quota-metric" x="270" y="240">Week</text>
+  <text class="quota-metric" x="496" y="240" text-anchor="end">--</text>
+  <rect class="progress-track" x="270" y="248" width="230" height="9" rx="4.5"/>
+  <rect class="progress-bar" x="271" y="249" width="228" height="7" rx="3.5"/>
+
+  <rect class="card" x="18" y="332" width="506" height="138"/>
+  <text class="quota-title" x="30" y="351">Codex 配额</text>
+  <text class="quota-sub" x="30" y="370">5H 重置: 2026-04-23 15:07</text>
+  <rect class="badge-filled" x="434" y="338" width="76" height="19" rx="9.5"/>
+  <text class="badge-text-light" x="456" y="351">告急</text>
+  <text class="quota-metric" x="30" y="398">5H</text>
+  <text class="quota-metric" x="215" y="398" text-anchor="end">5%</text>
+  <rect class="progress-track" x="30" y="406" width="190" height="9" rx="4.5"/>
+  <rect class="progress-bar" x="31" y="407" width="9.5" height="7" rx="3.5"/>
+  <line class="divider" x1="245" y1="382" x2="245" y2="422"/>
+  <text class="quota-metric" x="270" y="398">Week</text>
+  <text class="quota-metric" x="496" y="398" text-anchor="end">37%</text>
+  <rect class="progress-track" x="270" y="406" width="230" height="9" rx="4.5"/>
+  <rect class="progress-bar" x="271" y="407" width="85" height="7" rx="3.5"/>
+
+  <rect class="card" x="534" y="189" width="248" height="281"/>
+  <text class="system-title" x="550" y="208">告警</text>
+  <rect class="badge-filled" x="550" y="218" width="66" height="18" rx="9"/>
+  <text class="badge-text-light" x="563" y="231">重点告警</text>
+  <text class="system-text" x="550" y="264">1. admin10010</text>
+  <text class="system-text" x="550" y="285">5H 余量仅 5%</text>
+  <line class="divider" x1="550" y1="396" x2="766" y2="396"/>
+  <circle cx="559" cy="414" r="5" fill="none" stroke="#555" stroke-width="0.5"/>
+  <text class="system-detail" x="574" y="418">刷新周期 300s</text>
+</svg>

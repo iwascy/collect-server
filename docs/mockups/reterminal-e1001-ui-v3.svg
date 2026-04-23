@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="960" viewBox="0 0 1600 960">
+  <defs>
+    <style>
+      .bg { fill: #f4f2eb; }
+      .frame { fill: #f7f5ef; stroke: #111; stroke-width: 4; }
+      .card { fill: #faf8f2; stroke: #111; stroke-width: 4; }
+      .divider { stroke: #111; stroke-width: 3; }
+      .soft-divider { stroke: #111; stroke-width: 2; opacity: 0.6; }
+      .title-xl { font: 700 54px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .title-lg { font: 700 44px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .title-md { font: 700 34px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .num-xl { font: 700 104px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; letter-spacing: -2px; }
+      .label-lg { font: 600 34px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .label-md { font: 600 28px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .label-sm { font: 600 22px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .pill-dark { fill: #111; }
+      .pill-light { fill: #faf8f2; stroke: #111; stroke-width: 3; }
+      .pill-text-dark { font: 700 26px "Noto Sans SC", "PingFang SC", sans-serif; fill: #111; }
+      .pill-text-light { font: 700 26px "Noto Sans SC", "PingFang SC", sans-serif; fill: #faf8f2; }
+      .icon-box { fill: #faf8f2; stroke: #111; stroke-width: 3; }
+      .progress-bg { fill: #fff; stroke: #111; stroke-width: 3; }
+      .progress-fill { fill: #111; }
+      .icon-stroke { stroke: #111; stroke-width: 4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="960"/>
+  <rect class="frame" x="18" y="18" width="1564" height="924" rx="18"/>
+
+  <rect class="card" x="36" y="34" width="1528" height="86" rx="16"/>
+  <text class="title-xl" x="62" y="82">InfoHub EInk</text>
+  <text class="title-lg" x="596" y="78">刷新时间 2026-04-22 19:40</text>
+  <rect class="pill-dark" x="1348" y="33" width="188" height="60" rx="30"/>
+  <text class="pill-text-light" x="1382" y="74">状态 正常</text>
+
+  <rect class="card" x="36" y="144" width="488" height="248" rx="18"/>
+  <rect class="icon-box" x="64" y="170" width="74" height="74" rx="14"/>
+  <text class="pill-text-dark" x="90" y="217">C</text>
+  <text class="title-lg" x="168" y="212">Claude Relay</text>
+  <text class="num-xl" x="62" y="302">2.9M</text>
+  <text class="label-lg" x="384" y="301">Token</text>
+  <line class="divider" x1="64" y1="326" x2="460" y2="326"/>
+  <text class="title-md" x="64" y="366">成本 $4.39</text>
+
+  <rect class="card" x="556" y="144" width="488" height="248" rx="18"/>
+  <rect class="icon-box" x="584" y="170" width="74" height="74" rx="14"/>
+  <text class="pill-text-dark" x="608" y="217">S</text>
+  <text class="title-lg" x="690" y="212">Sub2API</text>
+  <rect class="pill-light" x="860" y="170" width="152" height="50" rx="14"/>
+  <text class="pill-text-dark" x="887" y="204">合并统计</text>
+  <text class="num-xl" x="584" y="302">131.0M</text>
+  <text class="label-lg" x="948" y="301">Token</text>
+  <line class="divider" x1="584" y1="326" x2="980" y2="326"/>
+  <text class="title-md" x="584" y="366">成本 $47.47</text>
+
+  <rect class="card" x="1076" y="144" width="488" height="248" rx="18"/>
+  <rect class="icon-box" x="1104" y="170" width="74" height="74" rx="14"/>
+  <text class="pill-text-dark" x="1128" y="217">T</text>
+  <text class="title-lg" x="1212" y="212">今日合计</text>
+  <text class="num-xl" x="1104" y="302">133.9M</text>
+  <text class="label-lg" x="1468" y="301">Token</text>
+  <line class="divider" x1="1104" y1="326" x2="1500" y2="326"/>
+  <text class="title-md" x="1104" y="366">成本 $51.86</text>
+  <text class="title-md" x="1420" y="366">告警 1</text>
+
+  <rect class="card" x="36" y="412" width="944" height="250" rx="18"/>
+  <text class="title-lg" x="68" y="474">Claude Relay 配额</text>
+  <text class="title-md" x="68" y="522">5H 重置: 2026-04-22 19:00</text>
+  <rect class="pill-light" x="838" y="440" width="112" height="56" rx="14"/>
+  <text class="pill-text-dark" x="866" y="478">正常</text>
+  <text class="title-lg" x="68" y="596">5H</text>
+  <text class="title-lg" x="372" y="596">100%</text>
+  <rect class="progress-bg" x="68" y="620" width="412" height="28" rx="8"/>
+  <rect class="progress-fill" x="70" y="622" width="408" height="24" rx="6"/>
+  <line class="soft-divider" x1="518" y1="544" x2="518" y2="648"/>
+  <text class="title-lg" x="562" y="596">Week</text>
+  <text class="title-lg" x="846" y="596">67%</text>
+  <rect class="progress-bg" x="562" y="620" width="358" height="28" rx="8"/>
+  <rect class="progress-fill" x="564" y="622" width="240" height="24" rx="6"/>
+
+  <rect class="card" x="36" y="680" width="944" height="250" rx="18"/>
+  <text class="title-lg" x="68" y="742">Sub2API 配额</text>
+  <text class="title-md" x="68" y="790">5H 重置: 2026-04-22 20:28</text>
+  <rect class="pill-light" x="656" y="708" width="164" height="50" rx="14"/>
+  <text class="pill-text-dark" x="685" y="742">多账户合并</text>
+  <rect class="pill-dark" x="838" y="708" width="112" height="54" rx="14"/>
+  <text class="pill-text-light" x="866" y="744">告急</text>
+  <text class="title-lg" x="68" y="864">5H</text>
+  <text class="title-lg" x="372" y="864">17%</text>
+  <rect class="progress-bg" x="68" y="888" width="412" height="28" rx="8"/>
+  <rect class="progress-fill" x="70" y="890" width="102" height="24" rx="6"/>
+  <line class="soft-divider" x1="518" y1="812" x2="518" y2="916"/>
+  <text class="title-lg" x="562" y="864">Week</text>
+  <text class="title-lg" x="846" y="864">56%</text>
+  <rect class="progress-bg" x="562" y="888" width="358" height="28" rx="8"/>
+  <rect class="progress-fill" x="564" y="890" width="202" height="24" rx="6"/>
+
+  <rect class="card" x="998" y="412" width="566" height="518" rx="18"/>
+  <text class="title-lg" x="1038" y="474">告警与系统</text>
+  <rect class="pill-dark" x="1038" y="498" width="140" height="56" rx="28"/>
+  <text class="pill-text-light" x="1064" y="536">重点告警</text>
+  <text class="title-lg" x="1038" y="630">1. admin10010</text>
+  <text class="title-lg" x="1038" y="716">5H 余量仅 17%</text>
+  <line class="divider" x1="1038" y1="760" x2="1526" y2="760"/>
+
+  <path class="icon-stroke" d="M1042 818 a18 18 0 1 1 10 34"/>
+  <path class="icon-stroke" d="M1065 819 l-22 0 l0 -20"/>
+  <text class="title-md" x="1108" y="825">刷新周期 300s</text>
+
+  <rect class="icon-box" x="1036" y="860" width="44" height="44" rx="6"/>
+  <circle class="icon-stroke" cx="1050" cy="874" r="2"/>
+  <circle class="icon-stroke" cx="1058" cy="874" r="2"/>
+  <circle class="icon-stroke" cx="1066" cy="874" r="2"/>
+  <line class="icon-stroke" x1="1048" y1="888" x2="1068" y2="888"/>
+  <text class="title-md" x="1108" y="892">按键 Force Sync / GPIO3</text>
+
+  <rect class="icon-box" x="1036" y="902" width="44" height="28" rx="4"/>
+  <line class="icon-stroke" x1="1042" y1="934" x2="1074" y2="934"/>
+  <text class="title-md" x="1108" y="930">显示 7.50inv2alt + 2ms</text>
+</svg>

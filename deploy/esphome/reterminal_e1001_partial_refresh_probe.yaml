@@ -7,26 +7,16 @@
 substitutions:
   device_name: reterminal-e1001-infohub
   friendly_name: reTerminal E1001 InfoHub
-  plugged_poll_interval: 2min
-  battery_poll_interval: 5min
+  poll_interval: 5min
   full_payload_sync_every: "6"
-  time_zone: Asia/Shanghai
-  battery_quiet_start_hour: "22"
-  battery_quiet_end_hour: "10"
-  plugged_voltage_threshold: "4.15"
-  battery_voltage_threshold: "4.05"
-  low_battery_level_threshold: "20"
 
 esphome:
   name: ${device_name}
   friendly_name: ${friendly_name}
   on_boot:
-    - priority: 600
-      then:
-        - output.turn_on: bsp_battery_enable
-        - delay: 200ms
-        - component.update: battery_voltage
-        - component.update: battery_level
+    priority: -100
+    then:
+      - script.execute: fetch_dashboard_payload
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -50,10 +40,6 @@ ota:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-  on_connect:
-    then:
-      - delay: 5s
-      - script.execute: run_power_aware_refresh
   ap:
     ssid: "InfoHub Fallback"
     password: !secret wifi_fallback_password
@@ -61,11 +47,6 @@ wifi:
 captive_portal:
 
 json:
-
-output:
-  - platform: gpio
-    pin: GPIO21
-    id: bsp_battery_enable
 
 http_request:
   verify_ssl: false
@@ -77,61 +58,45 @@ font:
   - file: "gfonts://Noto+Sans+SC@700"
     id: font_huge
     size: 54
-    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急低电量'
+    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急'
   - file: "gfonts://Noto+Sans+SC@700"
     id: font_header
     size: 24
-    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急低电量'
+    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急'
   - file: "gfonts://Noto+Sans+SC@500"
     id: font_time
     size: 16
-    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急低电量'
+    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急'
   - file: "gfonts://Noto+Sans+SC@500"
     id: font_label
     size: 17
-    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急低电量'
+    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急'
   - file: "gfonts://Noto+Sans+SC@700"
     id: font_title
     size: 17
-    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急低电量'
+    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急'
   - file: "gfonts://Noto+Sans+SC@700"
     id: font_metric
     size: 18
-    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急低电量'
+    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急'
   - file: "gfonts://Noto+Sans+SC@600"
     id: font_md
     size: 15
-    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急低电量'
+    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急'
   - file: "gfonts://Noto+Sans+SC@500"
     id: font_sm
     size: 14
-    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急低电量'
+    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急'
   - file: "gfonts://Noto+Sans+SC@500"
     id: font_xs
     size: 13
-    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急低电量'
+    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急'
   - file: "gfonts://Noto+Sans+SC@700"
     id: font_badge
     size: 13
-    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急低电量'
+    glyphs: ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz%$.,:-_+/()[]#&!?@*=<>"''：刷新时间状态等待首次拉取数据解析失败请求成本启用告警总量今日合计余仅正常关注充足最佳耗尽重置暂无同步与系统概览配额显示按键周期点急'
 
 globals:
-  - id: battery_sample_ready
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-  - id: low_battery_active
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-  - id: low_battery_display_refresh_pending
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-  - id: external_power_connected
-    type: bool
-    restore_value: no
-    initial_value: 'false'
   - id: last_payload_body
     type: std::string
     restore_value: no
@@ -205,197 +170,11 @@ globals:
     restore_value: no
     initial_value: '0'
 
-sensor:
-  - platform: adc
-    pin: GPIO1
-    name: "${friendly_name} Battery Voltage"
-    id: battery_voltage
-    update_interval: 30s
-    attenuation: 12db
-    accuracy_decimals: 2
-    filters:
-      - multiply: 2.0
-    on_value:
-      then:
-        - lambda: |-
-            const float plugged_threshold = ${plugged_voltage_threshold};
-            const float battery_threshold = ${battery_voltage_threshold};
-            bool had_sample = id(battery_sample_ready);
-            bool previous_mode = id(external_power_connected);
-            bool next_mode = previous_mode;
-
-            if (!had_sample) {
-              next_mode = x >= plugged_threshold;
-              id(battery_sample_ready) = true;
-            } else if (x >= plugged_threshold) {
-              next_mode = true;
-            } else if (x <= battery_threshold) {
-              next_mode = false;
-            }
-
-            id(external_power_connected) = next_mode;
-
-            if (had_sample && next_mode != previous_mode) {
-              ESP_LOGI(
-                "power_profile",
-                "power profile changed to %s at %.2fV",
-                next_mode ? "plugged" : "battery",
-                x
-              );
-              id(run_power_aware_refresh).execute();
-            }
-
-  - platform: template
-    name: "${friendly_name} Battery Level"
-    id: battery_level
-    unit_of_measurement: "%"
-    icon: "mdi:battery"
-    device_class: battery
-    state_class: measurement
-    accuracy_decimals: 0
-    lambda: |-
-      return id(battery_voltage).state;
-    update_interval: 30s
-    filters:
-      - calibrate_linear:
-          - 4.15 -> 100.0
-          - 3.96 -> 90.0
-          - 3.91 -> 80.0
-          - 3.85 -> 70.0
-          - 3.80 -> 60.0
-          - 3.75 -> 50.0
-          - 3.68 -> 40.0
-          - 3.58 -> 30.0
-          - 3.49 -> 20.0
-          - 3.41 -> 10.0
-          - 3.30 -> 5.0
-          - 3.27 -> 0.0
-      - clamp:
-          min_value: 0
-          max_value: 100
-    on_value:
-      then:
-        - lambda: |-
-            const float low_battery_threshold = ${low_battery_level_threshold};
-            bool next_low_battery = x <= low_battery_threshold;
-            bool changed = id(low_battery_active) != next_low_battery;
-
-            id(low_battery_active) = next_low_battery;
-            id(low_battery_display_refresh_pending) =
-              changed && (!id(last_payload_body).empty() || !id(last_error_text).empty());
-        - if:
-            condition:
-              lambda: return id(low_battery_display_refresh_pending);
-            then:
-              - component.update: epaper_display
-              - lambda: id(low_battery_display_refresh_pending) = false;
-
-text_sensor:
-  - platform: template
-    name: "${friendly_name} Power Profile"
-    icon: "mdi:power-plug-battery"
-    update_interval: 30s
-    lambda: |-
-      if (!id(battery_sample_ready)) {
-        return {"检测中"};
-      }
-
-      if (id(external_power_connected)) {
-        return {"插电高实时"};
-      }
-
-      auto now = id(sntp_clock).now();
-      if (now.is_valid() &&
-          (now.hour >= ${battery_quiet_start_hour} || now.hour < ${battery_quiet_end_hour})) {
-        return {"电池夜间静默"};
-      }
-
-      return {"电池省电"};
-
-time:
-  - platform: sntp
-    id: sntp_clock
-    timezone: ${time_zone}
-    on_time_sync:
-      then:
-        - script.execute: run_power_aware_refresh
-    on_time:
-      - hours: ${battery_quiet_start_hour}
-        minutes: 0
-        seconds: 0
-        then:
-          - if:
-              condition:
-                lambda: return id(battery_sample_ready) && !id(external_power_connected);
-              then:
-                - logger.log: "battery quiet hours started, entering deep sleep"
-                - deep_sleep.enter:
-                    id: quiet_hours_sleep
-                    until: "10:00:00"
-                    time_id: sntp_clock
-      - hours: ${battery_quiet_end_hour}
-        minutes: 0
-        seconds: 0
-        then:
-          - script.execute: run_power_aware_refresh
-
-deep_sleep:
-  id: quiet_hours_sleep
-  wakeup_pin:
-    number: GPIO4
-    mode: INPUT_PULLUP
-    inverted: true
-  wakeup_pin_mode: INVERT_WAKEUP
-
 spi:
   clk_pin: GPIO7
   mosi_pin: GPIO9
 
 script:
-  - id: run_power_aware_refresh
-    mode: restart
-    then:
-      - if:
-          condition:
-            lambda: |-
-              if (!id(battery_sample_ready)) {
-                return false;
-              }
-
-              if (id(external_power_connected)) {
-                return true;
-              }
-
-              auto now = id(sntp_clock).now();
-              if (!now.is_valid()) {
-                return false;
-              }
-
-              return now.hour < ${battery_quiet_end_hour} ||
-                now.hour >= ${battery_quiet_start_hour}
-                ? false
-                : true;
-          then:
-            - script.execute: fetch_dashboard_payload
-          else:
-            - if:
-                condition:
-                  lambda: |-
-                    if (!id(battery_sample_ready) || id(external_power_connected)) {
-                      return false;
-                    }
-
-                    auto now = id(sntp_clock).now();
-                    return now.is_valid() &&
-                      (now.hour >= ${battery_quiet_start_hour} ||
-                       now.hour < ${battery_quiet_end_hour});
-                then:
-                  - logger.log: "battery quiet hours active, entering deep sleep until 10:00"
-                  - deep_sleep.enter:
-                      id: quiet_hours_sleep
-                      until: "10:00:00"
-                      time_id: sntp_clock
-
   - id: fetch_dashboard_payload
     mode: restart
     then:
@@ -579,21 +358,9 @@ script:
                     - lambda: id(pending_display_refresh) = false;
 
 interval:
-  - interval: ${plugged_poll_interval}
+  - interval: ${poll_interval}
     then:
-      - if:
-          condition:
-            lambda: return id(battery_sample_ready) && id(external_power_connected);
-          then:
-            - script.execute: run_power_aware_refresh
-
-  - interval: ${battery_poll_interval}
-    then:
-      - if:
-          condition:
-            lambda: return id(battery_sample_ready) && !id(external_power_connected);
-          then:
-            - script.execute: run_power_aware_refresh
+      - script.execute: fetch_dashboard_payload
 
 button:
   - platform: template
@@ -609,17 +376,6 @@ binary_sensor:
       mode: INPUT_PULLUP
       inverted: true
     name: "${friendly_name} Refresh Button"
-    on_press:
-      then:
-        - lambda: id(force_full_refresh_requested) = true;
-        - script.execute: fetch_dashboard_payload
-
-  - platform: gpio
-    pin:
-      number: GPIO4
-      mode: INPUT_PULLUP
-      inverted: true
-    name: "${friendly_name} Wake Button"
     on_press:
       then:
         - lambda: id(force_full_refresh_requested) = true;
@@ -1230,23 +986,14 @@ display:
       Rect system_panel{534, 193, 248, 278};
       Rect failure_panel{18, 58, 764, 413};
 
-      bool show_low_battery_badge = id(low_battery_active);
-      std::string low_battery_text = "低电量";
-      int low_battery_badge_w = show_low_battery_badge ? badge_width(id(font_badge), low_battery_text, 78, 116, 12) : 0;
-
       std::string header_status = "状态 " + trim_text(status_text, 10);
-      int status_badge_max_width = show_low_battery_badge ? 132 : 176;
-      int header_badge_w = badge_width(id(font_badge), header_status, 90, status_badge_max_width, 12);
+      int header_badge_w = badge_width(id(font_badge), header_status, 90, 176, 12);
       Rect header_badge{right_of(header) - 10 - header_badge_w, 21, header_badge_w, 24};
-      Rect low_battery_badge{header_badge.x - 8 - low_battery_badge_w, 21, low_battery_badge_w, 24};
 
       draw_outline_round_rect(frame, 5);
       draw_outline_round_rect(header, 4);
       it.printf(header.x + 10, header.y + 5, id(font_header), "InfoHub");
       it.printf(header.x + header.w / 2, header.y + 7, id(font_time), TextAlign::TOP_CENTER, "%s", fit_text_width(id(font_time), updated_at, 260).c_str());
-      if (show_low_battery_badge) {
-        draw_badge(low_battery_badge, low_battery_text, false);
-      }
       draw_badge(header_badge, header_status, true);
 
       if (!parsed) {

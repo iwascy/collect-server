@@ -43,7 +43,7 @@ collectors:
       type: "login_json"
       header_name: "Authorization"
       token_prefix: "Bearer"
-      login_endpoint: "/api/v1/auth/login"
+      login_endpoint: "https://sub2api-proxy.cccy.fun/api/v1/auth/login"
       method: "POST"
       token_path: "data.access_token"
       headers: {}

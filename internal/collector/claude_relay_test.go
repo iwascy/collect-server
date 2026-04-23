@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -184,6 +185,183 @@ func TestClaudeRelayCollectorCollect(t *testing.T) {
 	}
 	if got := mustFindItem(t, items, "账号 beta Week 额度").Value; got != "80%" {
 		t.Fatalf("unexpected beta week value: %s", got)
+	}
+}
+
+func TestClaudeRelayCollectorReusesCachedLoginToken(t *testing.T) {
+	var loginCalls atomic.Int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/web/auth/login":
+			loginCalls.Add(1)
+			writeJSON(t, w, map[string]any{"token": "relay-session"})
+		case "/admin/claude-accounts":
+			expectAuthHeader(t, r, "Bearer relay-session")
+			writeJSON(t, w, map[string]any{
+				"data": []map[string]any{
+					{
+						"id":       "acct-1",
+						"name":     "alpha",
+						"isActive": true,
+						"status":   "active",
+						"usage": map[string]any{
+							"daily": map[string]any{
+								"allTokens": 100,
+							},
+						},
+					},
+				},
+			})
+		case "/admin/claude-accounts/usage":
+			expectAuthHeader(t, r, "Bearer relay-session")
+			writeJSON(t, w, map[string]any{
+				"data": map[string]any{
+					"acct-1": map[string]any{
+						"fiveHour": map[string]any{"utilization": 10},
+						"sevenDay": map[string]any{"utilization": 20},
+					},
+				},
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	collector := NewClaudeRelayCollector(config.HTTPCollectorConfig{
+		TimeoutSeconds: 2,
+		Service: config.HTTPServiceConfig{
+			BaseURL: server.URL,
+			Endpoints: map[string]string{
+				"accounts": "/admin/claude-accounts",
+				"usage":    "/admin/claude-accounts/usage",
+			},
+		},
+		Auth: config.HTTPAuthConfig{
+			Type:          "login_json",
+			HeaderName:    "Authorization",
+			TokenPrefix:   "Bearer",
+			LoginEndpoint: "/web/auth/login",
+			Method:        http.MethodPost,
+			TokenPath:     "token",
+			Credentials: map[string]string{
+				"username": "relay-admin",
+				"password": "relay-pass",
+			},
+		},
+	}, nil)
+
+	for range [2]struct{}{} {
+		items, err := collector.Collect(context.Background())
+		if err != nil {
+			t.Fatalf("collect failed: %v", err)
+		}
+		if len(items) != 3 {
+			t.Fatalf("unexpected item count: %d", len(items))
+		}
+	}
+
+	if loginCalls.Load() != 1 {
+		t.Fatalf("expected cached token to be reused, got %d login calls", loginCalls.Load())
+	}
+}
+
+func TestClaudeRelayCollectorRefreshesCachedTokenAfterUnauthorized(t *testing.T) {
+	var loginCalls atomic.Int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/web/auth/login":
+			call := loginCalls.Add(1)
+			writeJSON(t, w, map[string]any{"token": fmt.Sprintf("relay-session-%d", call)})
+		case "/admin/claude-accounts", "/admin/claude-accounts/usage":
+			auth := r.Header.Get("Authorization")
+			if auth == "Bearer relay-session-1" {
+				w.WriteHeader(http.StatusUnauthorized)
+				writeJSON(t, w, map[string]any{"error": "expired"})
+				return
+			}
+			if auth != "Bearer relay-session-2" {
+				t.Fatalf("unexpected authorization header: %q", auth)
+			}
+
+			if r.URL.Path == "/admin/claude-accounts" {
+				writeJSON(t, w, map[string]any{
+					"data": []map[string]any{
+						{
+							"id":       "acct-1",
+							"name":     "alpha",
+							"isActive": true,
+							"status":   "active",
+							"usage": map[string]any{
+								"daily": map[string]any{
+									"allTokens": 123,
+								},
+							},
+						},
+					},
+				})
+				return
+			}
+
+			writeJSON(t, w, map[string]any{
+				"data": map[string]any{
+					"acct-1": map[string]any{
+						"fiveHour": map[string]any{"utilization": 10},
+						"sevenDay": map[string]any{"utilization": 20},
+					},
+				},
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	collector := NewClaudeRelayCollector(config.HTTPCollectorConfig{
+		TimeoutSeconds: 2,
+		Service: config.HTTPServiceConfig{
+			BaseURL: server.URL,
+			Endpoints: map[string]string{
+				"accounts": "/admin/claude-accounts",
+				"usage":    "/admin/claude-accounts/usage",
+			},
+		},
+		Auth: config.HTTPAuthConfig{
+			Type:          "login_json",
+			HeaderName:    "Authorization",
+			TokenPrefix:   "Bearer",
+			LoginEndpoint: "/web/auth/login",
+			Method:        http.MethodPost,
+			TokenPath:     "token",
+			Credentials: map[string]string{
+				"username": "relay-admin",
+				"password": "relay-pass",
+			},
+		},
+	}, nil)
+
+	items, err := collector.Collect(context.Background())
+	if err != nil {
+		t.Fatalf("collect failed: %v", err)
+	}
+	if len(items) != 3 {
+		t.Fatalf("unexpected item count: %d", len(items))
+	}
+	if loginCalls.Load() != 2 {
+		t.Fatalf("expected initial login plus refresh, got %d login calls", loginCalls.Load())
+	}
+
+	items, err = collector.Collect(context.Background())
+	if err != nil {
+		t.Fatalf("second collect failed: %v", err)
+	}
+	if len(items) != 3 {
+		t.Fatalf("unexpected second item count: %d", len(items))
+	}
+	if loginCalls.Load() != 2 {
+		t.Fatalf("expected refreshed token to be cached, got %d login calls", loginCalls.Load())
 	}
 }
 

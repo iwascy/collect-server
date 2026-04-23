@@ -126,6 +126,26 @@ collectors:
 	}
 }
 
+func TestLoadDefaultsStoreToSQLite(t *testing.T) {
+	configPath := writeTempConfig(t, `
+collectors:
+  claude_relay:
+    enabled: false
+`)
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("load config failed: %v", err)
+	}
+
+	if cfg.Store.Type != "sqlite" {
+		t.Fatalf("unexpected store type: %q", cfg.Store.Type)
+	}
+	if cfg.Store.SQLitePath != "./data/infohub.db" {
+		t.Fatalf("unexpected sqlite path: %q", cfg.Store.SQLitePath)
+	}
+}
+
 func writeTempConfig(t *testing.T, content string) string {
 	t.Helper()
 

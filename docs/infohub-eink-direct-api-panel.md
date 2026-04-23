@@ -77,7 +77,9 @@ infohub_eink_source_url: "http://10.30.5.172:8080/dashboard/eink?token=YOUR_DASH
 - `update_interval: never`，显示器不做固定周期刷新
 - 只要 HTTP 返回 body 和上次完全一致，就不触发 `component.update`
 - `GPIO3` 保留为实体手动刷新按钮
+- `GPIO4` 同时作为夜间 deep sleep 的唤醒键
 - 还额外暴露了一个 HA 里的 `Force Sync` 按钮
+- 新增了“插电高实时 / 电池省电 / 电池夜间静默”三种运行状态
 
 ESPHome 的 `secrets.yaml` 至少要补这些值：
 
@@ -92,6 +94,48 @@ infohub_eink_device_url: "http://10.30.5.172:8080/dashboard/eink/device.json?tok
 
 你也可以直接从 [deploy/esphome/secrets.example.yaml](/Users/cyan/code/collect-server/deploy/esphome/secrets.example.yaml) 复制示例，再填入真实值。
 
+### 省电版轮询策略
+
+当前仓库里的 API 模板已经内置一套偏稳妥的省电策略：
+
+- 插电模式：每 `2min` 请求一次
+- 电池模式：每 `5min` 请求一次
+- 电池夜间静默：`22:00` 到次日 `10:00` 不请求业务接口，并直接进入 deep sleep，等到 `10:00` 自动唤醒
+- 电子纸刷新仍然保留“只有 payload 变化才刷新”的逻辑，所以插电模式虽然请求更频繁，但不会因为同一份内容反复刷屏
+- 如果电量低于阈值，顶部状态栏会额外显示 `低电量` 标识
+
+另外，模板还会额外暴露这些实体，方便在 Home Assistant 里确认策略是否按预期切换：
+
+- `Battery Voltage`
+- `Battery Level`
+- `Power Profile`
+
+### 供电模式如何判断
+
+这版默认使用 Seeed 官方公开的电池测量方式：
+
+- `GPIO21` 打开电池电压测量
+- `GPIO1` 读取电池电压
+
+再通过两个电压阈值做近似判断：
+
+- `>= 4.15V` 视为插电高实时
+- `<= 4.05V` 视为电池省电
+- `<= 20%` 触发顶部 `低电量` 标识
+
+这是一个“够实用、但不是绝对精确”的默认方案。原因是当前公开资料里比较明确的是电池电压采样能力，而不是一个现成的、已在当前仓库验证过的 USB/VBUS 供电脚位。
+
+如果你后面实机发现：
+
+- 满电拔电后一小段时间里仍被判成“插电”
+- 或者边充边用但电压还没抬到阈值时，切换不够快
+
+可以直接微调 [reterminal_e1001_infohub_api.yaml](/Users/cyan/code/collect-server/deploy/esphome/reterminal_e1001_infohub_api.yaml) 顶部这两个 substitution：
+
+- `plugged_voltage_threshold`
+- `battery_voltage_threshold`
+- `low_battery_level_threshold`
+
 ### 已验证的配置注意事项
 
 这两点是 2026-04-22 在真实 HA / ESPHome 环境里已经踩到并确认过的问题：
@@ -99,7 +143,7 @@ infohub_eink_device_url: "http://10.30.5.172:8080/dashboard/eink/device.json?tok
 - fallback AP 的 `ssid` 不能超过 32 个字符，所以不要继续用 `"${friendly_name} Fallback"` 这种长名字，当前模板已经改成 `InfoHub Fallback`
 - `font.glyphs` 在 ESPHome 2026.4.1 下会严格校验重复字符，重复的空格、换行或汉字都会让 `esphome config` 直接失败；当前模板里的字形集合已经去重
 
-按当前仓库里的 API 版模板，`esphome config reterminal_e1001_infohub_api.yaml` 已经可以通过校验。
+基础 API 模板此前已经在当前仓库里跑通过 `esphome config`。这次新增的省电版改动，建议你在本机或 ESPHome Dashboard 里再补跑一次 `esphome config reterminal_e1001_infohub_api.yaml` 做最终确认。
 
 另外，2026-04-22 在当前这台 `reTerminal E1001` 上已经实机确认：
 
@@ -111,7 +155,7 @@ infohub_eink_device_url: "http://10.30.5.172:8080/dashboard/eink/device.json?tok
 
 所以当前仓库里的 API 模板已经同步切到这套显示参数，避免 Stage 1 能亮、Stage 2 又回退成白屏。
 
-## 4. 关于“局部刷新”的实际结论
+## 4. 关于“局部刷新”的当前结论
 
 这里要如实区分两层含义：
 
@@ -122,11 +166,12 @@ infohub_eink_device_url: "http://10.30.5.172:8080/dashboard/eink/device.json?tok
 2. 物理显示层面
    `reTerminal E1001` 常见官方示例仍然是 `waveshare_epaper` + `model: 7.50inv2`。但当前这台设备实测需要 `7.50inv2alt + reset_duration: 2ms` 才能稳定显示。而 ESPHome 官方把支持 partial refresh 的 7.5 寸型号单独列成 `7.50inV2p`。
 
-所以当前更稳妥的判断是：
+截至 2026-04-23，当前这台设备已经用独立 probe 固件完成验证，因此正式业务面板可以收敛为：
 
 - 这套方案能做到“API 直连 + 仅变化时刷新”
-- 但不能默认承诺这块屏一定支持真正意义上的硬件 partial refresh
-- 只有在你确认自己这块屏对应的是支持 partial refresh 的具体批次时，才建议尝试改成 `7.50inV2p`
+- 当前这台已确认可切到 `7.50inV2p`
+- 正式业务面板推荐保留 `reset_duration: 2ms`
+- 建议同时设置 `full_update_every`，避免长时间纯局刷积累残影
 
 ## 5. 推荐的部署顺序
 
@@ -137,7 +182,20 @@ infohub_eink_device_url: "http://10.30.5.172:8080/dashboard/eink/device.json?tok
 5. 再把设备 YAML 切换成 API 直连版
 6. 通过 OTA 更新设备，而不是重新走 USB 刷机
 7. 验证只有 JSON 内容变化时才会重新刷屏
-8. 如果 `esphome config` 失败，先优先检查 Wi-Fi fallback 名称长度、`font.glyphs` 是否有重复字符，以及是否缺少根级 `json:` 组件
+8. 如果你启用了省电版模板，建议顺手观察一下 HA 里新增的 `Power Profile` / `Battery Voltage` / `Battery Level` 三个实体，确认插电和电池切换是否符合这台机器的实际电压表现
+9. 如果 `esphome config` 失败，先优先检查 Wi-Fi fallback 名称长度、`font.glyphs` 是否有重复字符，以及是否缺少根级 `json:` 组件
+
+如果你准备进一步验证硬件级 partial refresh，不要直接拿业务面板硬切显示型号，先走独立探针固件：
+[reTerminal E1001 局部刷新验证方案](/Users/cyan/code/collect-server/docs/infohub-eink-partial-refresh-probe.md)
+
+## 6. 如果还要继续省电
+
+当前这版已经把“夜间不请求 + 夜间 deep sleep”做进模板了。如果你后面还想继续压榨续航，可以继续往下做：
+
+- 把白天电池模式也改成“定时唤醒后请求一次，再次 deep sleep”，省电幅度会比常驻 Wi‑Fi 再大一截
+- 如果后面确认到稳定可用的 USB/VBUS 检测脚位，可以把现在的电压近似判断改成真正的外部供电检测，切换会更准
+- 如果你确定后端采集本身不是分钟级变化，可以把 `battery_poll_interval` 从 `5min` 再拉长到 `15min`、`30min` 或更长
+- 如果夜间只需要保留画面、不需要联机，可以进一步评估在进入静默前主动关 Wi‑Fi 或更早进入 deep sleep
 
 ## 参考资料
 

@@ -5,7 +5,7 @@ ESPHOME_ENV_FILE := deploy/esphome/docker/.env
 ESPHOME_ENV_ARG := $(if $(wildcard $(ESPHOME_ENV_FILE)),--env-file $(ESPHOME_ENV_FILE),)
 ESPHOME_COMPOSE := docker $(DOCKER_CONTEXT_ARG) compose -f deploy/esphome/docker/compose.yaml $(ESPHOME_ENV_ARG)
 
-.PHONY: build run fmt test tidy esphome-config esphome-up esphome-down esphome-logs esphome-ps esphome-pull esphome-compile-stage1 esphome-compile-stage1-alt esphome-compile-stage2 esphome-recreate
+.PHONY: build run fmt test tidy esphome-config esphome-up esphome-down esphome-logs esphome-ps esphome-pull esphome-compile-stage1 esphome-compile-stage1-alt esphome-compile-stage2 esphome-compile-partial-probe esphome-recreate
 
 build:
 	go build -o bin/$(APP) ./cmd/infohub
@@ -52,3 +52,6 @@ esphome-compile-stage1-alt:
 
 esphome-compile-stage2:
 	$(ESPHOME_COMPOSE) exec esphome /entrypoint.sh compile /config/reterminal_e1001_infohub_api.yaml
+
+esphome-compile-partial-probe:
+	$(ESPHOME_COMPOSE) exec esphome /entrypoint.sh compile /config/reterminal_e1001_partial_refresh_probe.yaml
