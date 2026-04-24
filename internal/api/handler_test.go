@@ -551,6 +551,172 @@ func TestEInkDeviceDataReturnsCompactPayload(t *testing.T) {
 	}
 }
 
+func TestEInkDashboardDataPrioritizesLowestRemainingAlert(t *testing.T) {
+	dataStore := store.NewMemoryStore()
+	mustSaveSnapshot(t, dataStore, "claude_relay", []model.DataItem{
+		{
+			Source:    "claude_relay",
+			Category:  "quota",
+			Title:     "账号 cycyzg 5H 额度",
+			Value:     "6%",
+			FetchedAt: 1777027500,
+			Extra: map[string]any{
+				"remaining_percent": 6,
+				"window":            "5H",
+			},
+		},
+		{
+			Source:    "claude_relay",
+			Category:  "quota",
+			Title:     "账号 cycyzg Week 额度",
+			Value:     "83%",
+			FetchedAt: 1777027500,
+			Extra: map[string]any{
+				"remaining_percent": 83,
+				"window":            "Week",
+			},
+		},
+	})
+	mustSaveSnapshot(t, dataStore, "sub2api", []model.DataItem{
+		{
+			Source:    "sub2api",
+			Category:  "quota",
+			Title:     "账号 admin10010 5H 额度",
+			Value:     "58%",
+			FetchedAt: 1777027500,
+			Extra: map[string]any{
+				"remaining_percent": 58,
+				"window":            "5H",
+			},
+		},
+		{
+			Source:    "sub2api",
+			Category:  "quota",
+			Title:     "账号 admin10010 Week 额度",
+			Value:     "18%",
+			FetchedAt: 1777027500,
+			Extra: map[string]any{
+				"remaining_percent": 18,
+				"window":            "Week",
+			},
+		},
+	})
+
+	handler := NewHandler(dataStore, collector.NewRegistry(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/dashboard/eink/data.json?refresh=300", nil)
+	rec := httptest.NewRecorder()
+	handler.EInkDashboardData(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: %d", rec.Code)
+	}
+
+	var payload struct {
+		Alerts      []string `json:"alerts"`
+		AlertTitle  string   `json:"alert_title"`
+		AlertDetail string   `json:"alert_detail"`
+		Device      struct {
+			Alerts []string `json:"alerts"`
+		} `json:"device"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response failed: %v", err)
+	}
+
+	if len(payload.Alerts) != 2 || payload.Alerts[0] != "Claude cycyzg：5H 余量仅 6%" || payload.Alerts[1] != "admin10010：5H 余量仅 58%" {
+		t.Fatalf("unexpected dashboard alerts: %+v", payload.Alerts)
+	}
+	if payload.AlertTitle != "Claude cycyzg" || payload.AlertDetail != "5H 余量仅 6%" {
+		t.Fatalf("unexpected dashboard alert summary: %q / %q", payload.AlertTitle, payload.AlertDetail)
+	}
+	if len(payload.Device.Alerts) != 2 || payload.Device.Alerts[0] != "Claude cycyzg：5H 余量仅 6%" || payload.Device.Alerts[1] != "Codex admin10010：5H 余量仅 58%" {
+		t.Fatalf("unexpected device alerts: %+v", payload.Device.Alerts)
+	}
+}
+
+func TestEInkDashboardDataPrioritizesClaudeAlertWhenRemainingTies(t *testing.T) {
+	dataStore := store.NewMemoryStore()
+	mustSaveSnapshot(t, dataStore, "claude_relay", []model.DataItem{
+		{
+			Source:    "claude_relay",
+			Category:  "quota",
+			Title:     "账号 cycyzg 5H 额度",
+			Value:     "58%",
+			FetchedAt: 1777027500,
+			Extra: map[string]any{
+				"remaining_percent": 58,
+				"window":            "5H",
+			},
+		},
+		{
+			Source:    "claude_relay",
+			Category:  "quota",
+			Title:     "账号 cycyzg Week 额度",
+			Value:     "83%",
+			FetchedAt: 1777027500,
+			Extra: map[string]any{
+				"remaining_percent": 83,
+				"window":            "Week",
+			},
+		},
+	})
+	mustSaveSnapshot(t, dataStore, "sub2api", []model.DataItem{
+		{
+			Source:    "sub2api",
+			Category:  "quota",
+			Title:     "账号 admin10010 5H 额度",
+			Value:     "58%",
+			FetchedAt: 1777027500,
+			Extra: map[string]any{
+				"remaining_percent": 58,
+				"window":            "5H",
+			},
+		},
+		{
+			Source:    "sub2api",
+			Category:  "quota",
+			Title:     "账号 admin10010 Week 额度",
+			Value:     "18%",
+			FetchedAt: 1777027500,
+			Extra: map[string]any{
+				"remaining_percent": 18,
+				"window":            "Week",
+			},
+		},
+	})
+
+	handler := NewHandler(dataStore, collector.NewRegistry(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/dashboard/eink.json?refresh=300", nil)
+	rec := httptest.NewRecorder()
+	handler.EInkDashboardData(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: %d", rec.Code)
+	}
+
+	var payload struct {
+		Alerts      []string `json:"alerts"`
+		AlertTitle  string   `json:"alert_title"`
+		AlertDetail string   `json:"alert_detail"`
+		Device      struct {
+			Alerts []string `json:"alerts"`
+		} `json:"device"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response failed: %v", err)
+	}
+
+	if len(payload.Alerts) != 2 || payload.Alerts[0] != "Claude cycyzg：5H 余量仅 58%" || payload.Alerts[1] != "admin10010：5H 余量仅 58%" {
+		t.Fatalf("unexpected dashboard alerts: %+v", payload.Alerts)
+	}
+	if payload.AlertTitle != "Claude cycyzg" || payload.AlertDetail != "5H 余量仅 58%" {
+		t.Fatalf("unexpected dashboard alert summary: %q / %q", payload.AlertTitle, payload.AlertDetail)
+	}
+	if len(payload.Device.Alerts) != 2 || payload.Device.Alerts[0] != "Claude cycyzg：5H 余量仅 58%" || payload.Device.Alerts[1] != "Codex admin10010：5H 余量仅 58%" {
+		t.Fatalf("unexpected device alerts: %+v", payload.Device.Alerts)
+	}
+}
+
 func TestEInkDeviceDataReturnsMockPayloadWhenEnabled(t *testing.T) {
 	dataStore := store.NewMemoryStore()
 	if err := dataStore.Save("sub2api", []model.DataItem{

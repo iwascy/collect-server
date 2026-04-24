@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"math"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -437,8 +438,7 @@ func buildEInkDashboardPage(snapshots map[string]model.SourceSnapshot, refreshSe
 	subOverview, subTable, subCritical, subAlerts := buildSourceDashboard("sub2api", "Sub2API 今日概览", snapshots["sub2api"])
 
 	totalOverview := buildTotalOverview(claudeOverview, subOverview, claudeCritical+subCritical)
-	alerts := append([]string{}, subAlerts...)
-	alerts = append(alerts, claudeAlerts...)
+	alerts := mergeDashboardAlerts(claudeAlerts, subAlerts)
 	alertTitle, alertDetail := splitDashboardAlert(alerts)
 	device := buildEInkDevicePayload(snapshots, refreshSeconds)
 
@@ -469,8 +469,7 @@ func buildEInkDevicePayload(snapshots map[string]model.SourceSnapshot, refreshSe
 	totalRequests := int(math.Round(claudeOverview.Requests + codexOverview.Requests))
 	totalCost := claudeOverview.Cost + codexOverview.Cost
 
-	alerts := append([]string{}, codexAlerts...)
-	alerts = append(alerts, claudeAlerts...)
+	alerts := mergeDashboardAlerts(claudeAlerts, codexAlerts)
 
 	return einkDevicePayload{
 		UpdatedAt:      formatHeaderTime(updatedAtUnix),
@@ -1029,6 +1028,57 @@ func splitDashboardAlert(alerts []string) (string, string) {
 		}
 	}
 	return alert, ""
+}
+
+func mergeDashboardAlerts(groups ...[]string) []string {
+	alerts := make([]string, 0)
+	for _, group := range groups {
+		alerts = append(alerts, group...)
+	}
+	sort.SliceStable(alerts, func(i, j int) bool {
+		leftPercent := alertRemainingPercent(alerts[i])
+		rightPercent := alertRemainingPercent(alerts[j])
+		if leftPercent != rightPercent {
+			return leftPercent < rightPercent
+		}
+		return alertSourcePriority(alerts[i]) < alertSourcePriority(alerts[j])
+	})
+	return alerts
+}
+
+func alertSourcePriority(alert string) int {
+	if strings.HasPrefix(alert, "Claude ") {
+		return 0
+	}
+	if strings.HasPrefix(alert, "Codex ") {
+		return 1
+	}
+	return 2
+}
+
+func alertRemainingPercent(alert string) int {
+	percentIndex := strings.LastIndex(alert, "%")
+	if percentIndex < 0 {
+		return 101
+	}
+
+	start := percentIndex
+	for start > 0 {
+		char := alert[start-1]
+		if char < '0' || char > '9' {
+			break
+		}
+		start--
+	}
+	if start == percentIndex {
+		return 101
+	}
+
+	value, err := strconv.Atoi(alert[start:percentIndex])
+	if err != nil {
+		return 101
+	}
+	return value
 }
 
 func formatCompactWhole(value float64) string {
