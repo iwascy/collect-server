@@ -182,7 +182,17 @@ cd /opt/infohub/current
 set -a
 . ./.env
 set +a
-curl -fsS -H "Authorization: Bearer ${INFOHUB_AUTH_TOKEN}" "http://127.0.0.1:${INFOHUB_PORT:-8080}/api/v1/health"
+health_url="http://127.0.0.1:${INFOHUB_PORT:-8080}/api/v1/health"
+for attempt in $(seq 1 30); do
+  if curl -fsS -H "Authorization: Bearer ${INFOHUB_AUTH_TOKEN}" "${health_url}"; then
+    exit 0
+  fi
+  echo "Health check attempt ${attempt} failed, retrying..." >&2
+  sleep 1
+done
+
+echo "Health check failed after 30 attempts: ${health_url}" >&2
+exit 1
 REMOTE_CHECK
 '''
       }

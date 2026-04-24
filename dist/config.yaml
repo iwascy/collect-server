@@ -1,0 +1,70 @@
+server:
+  port: ${INFOHUB_PORT}
+  auth_token: "${INFOHUB_AUTH_TOKEN}"
+  dashboard_token: "${INFOHUB_DASHBOARD_TOKEN}"
+  read_timeout_seconds: 10
+  write_timeout_seconds: 10
+  shutdown_timeout_seconds: 10
+
+collectors:
+  claude_relay:
+    enabled: ${CLAUDE_RELAY_ENABLED}
+    cron: "*/10 * * * *"
+    timeout_seconds: 15
+    service:
+      base_url: "${CLAUDE_RELAY_BASE_URL}"
+      headers: {}
+      endpoints:
+        accounts: "/admin/claude-accounts"
+        usage: "/admin/claude-accounts/usage"
+    auth:
+      type: "login_json"
+      header_name: "Authorization"
+      token_prefix: "Bearer"
+      login_endpoint: "/web/auth/login"
+      method: "POST"
+      token_path: "token"
+      headers: {}
+      credentials:
+        username: "${CLAUDE_RELAY_USERNAME}"
+        password: "${CLAUDE_RELAY_PASSWORD}"
+
+  sub2api:
+    enabled: ${SUB2API_ENABLED}
+    cron: "*/10 * * * *"
+    timeout_seconds: 15
+    service:
+      base_url: "${SUB2API_BASE_URL}"
+      headers: {}
+      endpoints:
+        accounts: "/api/v1/admin/accounts"
+        today_stats: "/api/v1/admin/accounts/today-stats/batch"
+    auth:
+      type: "login_json"
+      header_name: "Authorization"
+      token_prefix: "Bearer"
+      login_endpoint: "https://sub2api-proxy.cccy.fun/api/v1/auth/login"
+      method: "POST"
+      token_path: "data.access_token"
+      headers: {}
+      credentials:
+        email: "${SUB2API_ADMIN_EMAIL}"
+        password: "${SUB2API_ADMIN_PASSWORD}"
+
+  feishu:
+    enabled: false
+    cron: "*/30 * * * *"
+    base_url: "https://open.feishu.cn"
+    endpoint: ""
+    app_id: ""
+    app_secret: ""
+    project_key: ""
+    timeout_seconds: 15
+    headers: {}
+
+store:
+  type: "${INFOHUB_STORE_TYPE}"
+  sqlite_path: "${INFOHUB_SQLITE_PATH}"
+
+log:
+  level: "${INFOHUB_LOG_LEVEL}"
