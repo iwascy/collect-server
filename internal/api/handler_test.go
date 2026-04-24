@@ -197,10 +197,10 @@ func TestEInkDashboardRendersCustomLayout(t *testing.T) {
 			Source:    "sub2api",
 			Category:  "quota",
 			Title:     "账号 kr2vv1nh@test1.susususu.fun Week 额度",
-			Value:     "0%",
+			Value:     "64%",
 			FetchedAt: 1776766339,
 			Extra: map[string]any{
-				"remaining_percent": 0,
+				"remaining_percent": 64,
 				"window":            "Week",
 			},
 		},
