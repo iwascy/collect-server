@@ -371,6 +371,9 @@ type quotaMetric struct {
 	UsedPercent      int
 	RemainingPercent int
 	ResetAt          string
+	QuotaSource      string
+	OnlineStatus     string
+	Unknown          bool
 }
 
 func (h *Handler) EInkDashboard(w http.ResponseWriter, r *http.Request) {
@@ -434,8 +437,10 @@ func (h *Handler) EInkDeviceData(w http.ResponseWriter, r *http.Request) {
 
 func buildEInkDashboardPage(snapshots map[string]model.SourceSnapshot, refreshSeconds int) einkDashboardPage {
 	updatedAtUnix := maxSnapshotDataUpdatedAt(snapshots)
-	claudeOverview, claudeTable, claudeCritical, claudeAlerts := buildSourceDashboard("claude_relay", "Claude Relay 今日概览", snapshots["claude_relay"])
-	subOverview, subTable, subCritical, subAlerts := buildSourceDashboard("sub2api", "Sub2API 今日概览", snapshots["sub2api"])
+	claudeKey, claudeSnapshot := preferredSnapshot(snapshots, "claude_local", "claude_relay")
+	codexKey, codexSnapshot := preferredSnapshot(snapshots, "codex_local", "sub2api")
+	claudeOverview, claudeTable, claudeCritical, claudeAlerts := buildSourceDashboard(claudeKey, dashboardOverviewTitle(claudeKey), claudeSnapshot)
+	subOverview, subTable, subCritical, subAlerts := buildSourceDashboard(codexKey, dashboardOverviewTitle(codexKey), codexSnapshot)
 
 	totalOverview := buildTotalOverview(claudeOverview, subOverview, claudeCritical+subCritical)
 	alerts := mergeDashboardAlerts(claudeAlerts, subAlerts)
@@ -462,8 +467,14 @@ func buildEInkDashboardPage(snapshots map[string]model.SourceSnapshot, refreshSe
 
 func buildEInkDevicePayload(snapshots map[string]model.SourceSnapshot, refreshSeconds int) einkDevicePayload {
 	updatedAtUnix := maxSnapshotDataUpdatedAt(snapshots)
-	claudeOverview, claudeTable, _, claudeAlerts := buildSourceDashboard("claude_relay", "Claude Relay 今日概览", snapshots["claude_relay"])
-	codexOverview, codexTable, _, codexAlerts := buildSourceDashboard("codex", "Codex 今日概览", snapshots["sub2api"])
+	claudeKey, claudeSnapshot := preferredSnapshot(snapshots, "claude_local", "claude_relay")
+	codexKey, codexSnapshot := preferredSnapshot(snapshots, "codex_local", "sub2api")
+	claudeOverview, claudeTable, _, claudeAlerts := buildSourceDashboard(claudeKey, dashboardOverviewTitle(claudeKey), claudeSnapshot)
+	codexDeviceKey := codexKey
+	if codexDeviceKey == "sub2api" {
+		codexDeviceKey = "codex"
+	}
+	codexOverview, codexTable, _, codexAlerts := buildSourceDashboard(codexDeviceKey, dashboardOverviewTitle(codexDeviceKey), codexSnapshot)
 
 	totalToken := claudeOverview.TokenValue + codexOverview.TokenValue
 	totalRequests := int(math.Round(claudeOverview.Requests + codexOverview.Requests))
@@ -643,6 +654,39 @@ func buildMockEInkDevicePayload(refreshSeconds int) einkDevicePayload {
 	}
 }
 
+func preferredSnapshot(snapshots map[string]model.SourceSnapshot, keys ...string) (string, model.SourceSnapshot) {
+	if len(keys) == 0 {
+		return "", model.SourceSnapshot{}
+	}
+	for _, key := range keys {
+		snapshot, ok := snapshots[key]
+		if !ok {
+			continue
+		}
+		if len(snapshot.Items) > 0 || snapshot.Status != "" {
+			return key, snapshot
+		}
+	}
+	return keys[0], model.SourceSnapshot{}
+}
+
+func dashboardOverviewTitle(sourceKey string) string {
+	switch sourceKey {
+	case "claude_local":
+		return "Claude Local 今日概览"
+	case "claude_relay":
+		return "Claude Relay 今日概览"
+	case "codex_local":
+		return "Codex Local 今日概览"
+	case "codex":
+		return "Codex 今日概览"
+	case "sub2api":
+		return "Sub2API 今日概览"
+	default:
+		return sourceKey + " 今日概览"
+	}
+}
+
 type sourceOverview struct {
 	Card           einkOverviewCard
 	TokenValue     float64
@@ -756,8 +800,12 @@ func buildTotalOverview(claude sourceOverview, sub sourceOverview, criticalCount
 
 func dashboardTableTitle(sourceKey string) string {
 	switch sourceKey {
+	case "claude_local":
+		return "Claude Local 配额"
 	case "claude_relay":
 		return "Claude Relay 配额"
+	case "codex_local":
+		return "Codex Local 配额"
 	case "codex":
 		return "Codex 账号额度"
 	case "sub2api":
@@ -784,6 +832,9 @@ func buildQuotaAccounts(items []model.DataItem, sourceKey string) ([]quotaAccoun
 		if name == "" || window == "" {
 			continue
 		}
+		if window != "5H" && window != "Week" {
+			continue
+		}
 
 		account, ok := byName[name]
 		if !ok {
@@ -796,6 +847,11 @@ func buildQuotaAccounts(items []model.DataItem, sourceKey string) ([]quotaAccoun
 			UsedPercent:      clampPercent(quotaUsedPercent(item)),
 			RemainingPercent: clampPercent(quotaRemainingPercent(item)),
 			ResetAt:          stringExtra(item.Extra, "reset_at"),
+			QuotaSource:      stringExtra(item.Extra, "quota_source"),
+			OnlineStatus:     stringExtra(item.Extra, "online_quota_status"),
+		}
+		if sourceKey == "codex_local" && metric.QuotaSource == "estimated_cap" && numericExtra(item.Extra, "cap") <= 0 {
+			metric.Unknown = true
 		}
 
 		switch window {
@@ -818,17 +874,21 @@ func buildQuotaAccounts(items []model.DataItem, sourceKey string) ([]quotaAccoun
 func buildQuotaRow(account quotaAccount) einkQuotaRow {
 	status, className := quotaStatus(account)
 	return einkQuotaRow{
-		Account: account.Name,
-		FiveHour: einkPercentCell{
-			Percent: account.FiveHour.RemainingPercent,
-			Text:    formatPercentText(account.FiveHour.RemainingPercent),
-		},
-		Week: einkPercentCell{
-			Percent: account.Week.RemainingPercent,
-			Text:    formatPercentText(account.Week.RemainingPercent),
-		},
+		Account:     account.Name,
+		FiveHour:    quotaPercentCell(account.FiveHour),
+		Week:        quotaPercentCell(account.Week),
 		Status:      status,
 		StatusClass: className,
+	}
+}
+
+func quotaPercentCell(metric quotaMetric) einkPercentCell {
+	if metric.Unknown {
+		return einkPercentCell{Percent: 0, Text: "--"}
+	}
+	return einkPercentCell{
+		Percent: metric.RemainingPercent,
+		Text:    formatPercentText(metric.RemainingPercent),
 	}
 }
 
@@ -859,6 +919,8 @@ func emptyQuotaRow() einkQuotaRow {
 
 func quotaRowSeverity(row einkQuotaRow) int {
 	switch {
+	case row.FiveHour.Text == "--" || row.Week.Text == "--":
+		return 4
 	case row.Week.Percent == 0:
 		return 5
 	case row.FiveHour.Percent <= 20 || row.Week.Percent <= 10:
@@ -879,6 +941,8 @@ func quotaRowFloor(row einkQuotaRow) int {
 
 func quotaStatus(account quotaAccount) (string, string) {
 	switch {
+	case account.FiveHour.Unknown || account.Week.Unknown:
+		return codexOnlineQuotaStatusLabel(account.FiveHour.OnlineStatus, account.Week.OnlineStatus), "solid"
 	case account.Week.RemainingPercent <= 0:
 		return "Week 耗尽", "solid"
 	case account.FiveHour.RemainingPercent >= 95 && account.Week.RemainingPercent >= 95:
@@ -896,13 +960,15 @@ func quotaStatus(account quotaAccount) (string, string) {
 
 func buildAlert(account quotaAccount, sourceKey string) (string, bool, bool) {
 	displayName := account.Name
-	if sourceKey == "claude_relay" {
+	if (sourceKey == "claude_relay" || sourceKey == "claude_local") && !strings.HasPrefix(displayName, "Claude") {
 		displayName = "Claude " + displayName
-	} else if sourceKey == "codex" {
+	} else if (sourceKey == "codex" || sourceKey == "codex_local") && !strings.HasPrefix(displayName, "Codex") {
 		displayName = "Codex " + displayName
 	}
 
 	switch {
+	case account.FiveHour.Unknown || account.Week.Unknown:
+		return fmt.Sprintf("%s：在线额度%s", displayName, codexOnlineQuotaAlertLabel(account.FiveHour.OnlineStatus, account.Week.OnlineStatus)), false, true
 	case account.Week.RemainingPercent <= 0:
 		return fmt.Sprintf("%s：Week 余量 %d%%", displayName, account.Week.RemainingPercent), true, true
 	case account.Week.RemainingPercent <= 10:
@@ -912,6 +978,56 @@ func buildAlert(account quotaAccount, sourceKey string) (string, bool, bool) {
 	default:
 		return "", false, false
 	}
+}
+
+func codexOnlineQuotaStatusLabel(statuses ...string) string {
+	switch firstNonEmptyStatus(statuses...) {
+	case "token_missing":
+		return "待登录"
+	case "unauthorized":
+		return "需刷新"
+	case "rate_limited":
+		return "限流"
+	case "endpoint_404":
+		return "端点异常"
+	case "transport_error":
+		return "查询失败"
+	default:
+		return "额度未知"
+	}
+}
+
+func codexOnlineQuotaAlertLabel(statuses ...string) string {
+	switch firstNonEmptyStatus(statuses...) {
+	case "token_missing":
+		return "缺少 ChatGPT token"
+	case "unauthorized":
+		return "登录已失效"
+	case "rate_limited":
+		return "被上游限流"
+	case "endpoint_404":
+		return "端点不可用"
+	case "transport_error":
+		return "查询失败"
+	default:
+		return "不可用"
+	}
+}
+
+func firstNonEmptyStatus(statuses ...string) string {
+	for _, status := range statuses {
+		status = strings.TrimSpace(status)
+		if status != "" && status != "disabled" && status != "ok" {
+			return status
+		}
+	}
+	for _, status := range statuses {
+		status = strings.TrimSpace(status)
+		if status != "" {
+			return status
+		}
+	}
+	return ""
 }
 
 func findTokenUsageItem(items []model.DataItem) (model.DataItem, bool) {
@@ -1243,11 +1359,11 @@ func nonEmpty(value string, fallback string) string {
 
 func dashboardCardIcon(kind string) template.HTML {
 	switch kind {
-	case "claude_relay":
+	case "claude_relay", "claude_local":
 		return template.HTML(`<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M9.3 14.4v-4.8h2.2c1.6 0 2.6 1 2.6 2.4s-1 2.4-2.6 2.4H9.3Z"/><path d="M15.2 9.6v4.8"/></svg>`)
 	case "sub2api":
 		return template.HTML(`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 0 1 0-8c.2 0 .5 0 .7.1A5.5 5.5 0 1 1 18 12h-1"/><path d="M8.5 18.5v2"/><path d="M12 16.5v4"/><path d="M15.5 18.5v2"/><circle cx="8.5" cy="20.5" r=".7" fill="#111111"/><circle cx="12" cy="20.5" r=".7" fill="#111111"/><circle cx="15.5" cy="20.5" r=".7" fill="#111111"/></svg>`)
-	case "codex":
+	case "codex", "codex_local":
 		return template.HTML(`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 0 1 0-8c.2 0 .5 0 .7.1A5.5 5.5 0 1 1 18 12h-1"/><path d="M8.5 18.5v2"/><path d="M12 16.5v4"/><path d="M15.5 18.5v2"/><circle cx="8.5" cy="20.5" r=".7" fill="#111111"/><circle cx="12" cy="20.5" r=".7" fill="#111111"/><circle cx="15.5" cy="20.5" r=".7" fill="#111111"/></svg>`)
 	default:
 		return template.HTML(`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 17V9"/><path d="M12 17V5"/><path d="M17 17v-7"/></svg>`)

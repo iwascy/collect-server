@@ -103,6 +103,9 @@ func (s *Scheduler) runCollector(ctx context.Context, name string) error {
 	if !ok {
 		return fmt.Errorf("collector %s not found", name)
 	}
+	if setter, ok := c.(interface{ SetStore(store.Store) }); ok {
+		setter.SetStore(s.store)
+	}
 
 	items, err := c.Collect(ctx)
 	if err != nil {

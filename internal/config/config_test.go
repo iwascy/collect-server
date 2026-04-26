@@ -146,6 +146,39 @@ collectors:
 	}
 }
 
+func TestLoadDefaultsCodexOnlineDisabled(t *testing.T) {
+	configPath := writeTempConfig(t, `
+collectors:
+  codex_local:
+    enabled: true
+`)
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("load config failed: %v", err)
+	}
+
+	online := cfg.Collectors.CodexLocal.Online
+	if online.Enabled {
+		t.Fatal("codex online quota should default to disabled")
+	}
+	if online.BaseURL != "https://chatgpt.com" {
+		t.Fatalf("unexpected base url: %q", online.BaseURL)
+	}
+	if online.TimeoutSeconds != 8 {
+		t.Fatalf("unexpected timeout: %d", online.TimeoutSeconds)
+	}
+	if online.StaleAfterSec != 60 {
+		t.Fatalf("unexpected stale_after_seconds: %d", online.StaleAfterSec)
+	}
+	if online.UserAgent != "infohub-codex-quota/1.0" {
+		t.Fatalf("unexpected user agent: %q", online.UserAgent)
+	}
+	if online.AuthPath == "" {
+		t.Fatal("expected default auth path")
+	}
+}
+
 func writeTempConfig(t *testing.T, content string) string {
 	t.Helper()
 

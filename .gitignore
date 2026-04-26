@@ -5,6 +5,7 @@
 /dist/infohub
 /dist/infohub-release.tgz
 /infohub
+/main
 /deploy/esphome/.esphome/
 /deploy/esphome/secrets.yaml
 /deploy/esphome/docker/.env

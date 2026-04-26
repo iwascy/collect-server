@@ -62,6 +62,36 @@ collectors:
     timeout_seconds: 15
     headers: {}
 
+  claude_local:
+    enabled: true
+    cron: "*/5 * * * *"
+    timeout_seconds: 15
+    paths:
+      - "${HOME}/.claude/projects"
+    mode: "builtin"
+    quota:
+      plan: "local"
+      five_hour_msg_cap: 0
+      monthly_msg_cap: 0
+
+  codex_local:
+    enabled: true
+    cron: "*/5 * * * *"
+    timeout_seconds: 15
+    paths:
+      - "${HOME}/.codex/sessions"
+    mode: "builtin"
+    online:
+      enabled: true  # Uses ~/.codex/auth.json as an online 5H / Week quota fallback.
+      # auth_path: "${HOME}/.codex/auth.json"
+      # base_url: "https://chatgpt.com"
+      # timeout_seconds: 8
+      # stale_after_seconds: 60
+    quota:
+      plan: "local"
+      five_hour_msg_cap: 0
+      weekly_msg_cap: 0
+
 store:
   type: "${INFOHUB_STORE_TYPE}"
   sqlite_path: "${INFOHUB_SQLITE_PATH}"

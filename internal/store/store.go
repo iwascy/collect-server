@@ -20,6 +20,40 @@ type Store interface {
 	Close() error
 }
 
+type LocalParseState struct {
+	Source        string
+	FilePath      string
+	ByteOffset    int64
+	MTimeUnix     int64
+	UpdatedAt     int64
+	ParserVersion int
+	Reset         bool
+}
+
+type LocalUsageRecord struct {
+	Source         string
+	FilePath       string
+	ByteOffset     int64
+	At             time.Time
+	Model          string
+	Input          float64
+	Output         float64
+	CacheRead      float64
+	CacheCreation  float64
+	Reasoning      float64
+	Total          float64
+	Quota5hUsed    float64
+	Quota5hReset   string
+	QuotaWeekUsed  float64
+	QuotaWeekReset string
+}
+
+type LocalUsageStateStore interface {
+	LoadLocalParseStates(source string) (map[string]LocalParseState, error)
+	SaveLocalUsageBatch(source string, states []LocalParseState, records []LocalUsageRecord) error
+	ListLocalUsageRecords(source string, start time.Time, end time.Time) ([]LocalUsageRecord, error)
+}
+
 func New(cfg config.StoreConfig) (Store, error) {
 	switch strings.ToLower(cfg.Type) {
 	case "memory":

@@ -3,7 +3,30 @@
     "allow": [
       "Bash(mkdir -p /Users/cyan/code/collect-server/docs/zh /Users/cyan/code/collect-server/docs/en)",
       "Bash(mv /Users/cyan/code/collect-server/docs/infohub-eink-*.md /Users/cyan/code/collect-server/docs/zh/)",
-      "Bash(grep -v '^\\\\S*:\\\\s*cd \\\\|/Users/cyan/code/collect-server/$\\\\|Cannot connect\\\\|^\\\\S*:\\\\s*#')"
+      "Bash(grep -v '^\\\\S*:\\\\s*cd \\\\|/Users/cyan/code/collect-server/$\\\\|Cannot connect\\\\|^\\\\S*:\\\\s*#')",
+      "Bash(git count-objects:*)",
+      "Bash(find /var/folders -name *.png -mtime -1)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(ls /Users/hcy/code/InfoHub/config*)",
+      "Bash(grep -l token_count ~/.codex/sessions/2026/04/26/rollout-2026-04-26T20-52-14-*.jsonl)",
+      "Bash(grep token_count ~/.codex/sessions/2026/04/26/rollout-2026-04-26T20-52-14-*.jsonl)",
+      "Bash(grep -h rate_limits ~/.codex/sessions/2026/04/26/*.jsonl)",
+      "Bash(grep -h \"\"used_percent\"\" ~/.codex/sessions/2026/04/26/*.jsonl)",
+      "Bash(grep -lh \"\"used_percent\"\" ~/.codex/sessions/2026/04/*/*.jsonl)",
+      "Bash(grep -h \"\"used_percent\"\" ~/.codex/sessions/2026/04/*/*.jsonl)",
+      "Bash(grep -lh percent ~/.codex/sessions/2026/04/*/*.jsonl)",
+      "Bash(grep -h \"percent\\\\|limit_reached\\\\|credits\" ~/.codex/sessions/2026/04/*/*.jsonl)",
+      "Read(//Users/hcy/.codex/**)",
+      "Bash(sqlite3 ~/.codex/logs_2.sqlite '.schema logs')",
+      "Bash(sqlite3 ~/.codex/logs_2.sqlite 'SELECT * FROM logs ORDER BY rowid DESC LIMIT 1')",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(gh repo:*)",
+      "Bash(gh search:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(python3:*)"
     ]
   }
 }
