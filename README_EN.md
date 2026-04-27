@@ -15,7 +15,7 @@ API quota aggregation service with e-ink dashboard. Collects usage metrics from 
 - **Scheduled & on-demand** -- cron-based periodic collection with manual trigger support
 - **Dual storage** -- SQLite for production, in-memory for development and testing
 - **E-ink dashboard** -- responsive HTML dashboard with progress bars and alerts, designed for 7.5" e-paper displays
-- **Device integration** -- JSON endpoints for ESPHome devices and Home Assistant embedding
+- **Device integration** -- JSON endpoints for direct ESPHome device access
 - **Flexible auth** -- Bearer token, login/JWT flow, or no-auth per collector
 
 ## Quick Start
@@ -178,7 +178,6 @@ internal/
   store/              Storage interface (SQLite, in-memory)
 deploy/
   esphome/            ESPHome device configs for e-ink displays
-  homeassistant/      Home Assistant integration configs
 ```
 
 ### Adding a Collector
