@@ -395,7 +395,7 @@ func (h *Handler) EInkDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page := buildEInkDashboardPage(snapshots, dashboardRefreshSeconds(r))
+	page := buildEInkDashboardPage(snapshots, dashboardRefreshSeconds(r), h.dashboardSources)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
@@ -417,7 +417,7 @@ func (h *Handler) EInkDashboardData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, buildEInkDashboardPage(snapshots, dashboardRefreshSeconds(r)))
+	writeJSON(w, http.StatusOK, buildEInkDashboardPage(snapshots, dashboardRefreshSeconds(r), h.dashboardSources))
 }
 
 func (h *Handler) EInkDeviceData(w http.ResponseWriter, r *http.Request) {
@@ -432,20 +432,20 @@ func (h *Handler) EInkDeviceData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, buildEInkDevicePayload(snapshots, dashboardRefreshSeconds(r)))
+	writeJSON(w, http.StatusOK, buildEInkDevicePayload(snapshots, dashboardRefreshSeconds(r), h.dashboardSources))
 }
 
-func buildEInkDashboardPage(snapshots map[string]model.SourceSnapshot, refreshSeconds int) einkDashboardPage {
-	updatedAtUnix := maxSnapshotDataUpdatedAt(snapshots)
-	claudeKey, claudeSnapshot := preferredSnapshot(snapshots, "claude_local", "claude_relay")
-	codexKey, codexSnapshot := preferredSnapshot(snapshots, "codex_local", "sub2api")
+func buildEInkDashboardPage(snapshots map[string]model.SourceSnapshot, refreshSeconds int, sources DashboardSources) einkDashboardPage {
+	claudeKey, claudeSnapshot := configuredSnapshot(snapshots, sources.Claude)
+	codexKey, codexSnapshot := configuredSnapshot(snapshots, sources.Codex)
+	updatedAtUnix := maxSnapshotDataUpdatedAt(selectedSnapshots(claudeKey, claudeSnapshot, codexKey, codexSnapshot))
 	claudeOverview, claudeTable, claudeCritical, claudeAlerts := buildSourceDashboard(claudeKey, dashboardOverviewTitle(claudeKey), claudeSnapshot)
 	subOverview, subTable, subCritical, subAlerts := buildSourceDashboard(codexKey, dashboardOverviewTitle(codexKey), codexSnapshot)
 
 	totalOverview := buildTotalOverview(claudeOverview, subOverview, claudeCritical+subCritical)
 	alerts := mergeDashboardAlerts(claudeAlerts, subAlerts)
 	alertTitle, alertDetail := splitDashboardAlert(alerts)
-	device := buildEInkDevicePayload(snapshots, refreshSeconds)
+	device := buildEInkDevicePayload(snapshots, refreshSeconds, sources)
 
 	return einkDashboardPage{
 		UpdatedAt:      formatHeaderTime(updatedAtUnix),
@@ -465,10 +465,10 @@ func buildEInkDashboardPage(snapshots map[string]model.SourceSnapshot, refreshSe
 	}
 }
 
-func buildEInkDevicePayload(snapshots map[string]model.SourceSnapshot, refreshSeconds int) einkDevicePayload {
-	updatedAtUnix := maxSnapshotDataUpdatedAt(snapshots)
-	claudeKey, claudeSnapshot := preferredSnapshot(snapshots, "claude_local", "claude_relay")
-	codexKey, codexSnapshot := preferredSnapshot(snapshots, "codex_local", "sub2api")
+func buildEInkDevicePayload(snapshots map[string]model.SourceSnapshot, refreshSeconds int, sources DashboardSources) einkDevicePayload {
+	claudeKey, claudeSnapshot := configuredSnapshot(snapshots, sources.Claude)
+	codexKey, codexSnapshot := configuredSnapshot(snapshots, sources.Codex)
+	updatedAtUnix := maxSnapshotDataUpdatedAt(selectedSnapshots(claudeKey, claudeSnapshot, codexKey, codexSnapshot))
 	claudeOverview, claudeTable, _, claudeAlerts := buildSourceDashboard(claudeKey, dashboardOverviewTitle(claudeKey), claudeSnapshot)
 	codexDeviceKey := codexKey
 	if codexDeviceKey == "sub2api" {
@@ -654,20 +654,26 @@ func buildMockEInkDevicePayload(refreshSeconds int) einkDevicePayload {
 	}
 }
 
-func preferredSnapshot(snapshots map[string]model.SourceSnapshot, keys ...string) (string, model.SourceSnapshot) {
-	if len(keys) == 0 {
+func configuredSnapshot(snapshots map[string]model.SourceSnapshot, key string) (string, model.SourceSnapshot) {
+	key = strings.TrimSpace(key)
+	if key == "" {
 		return "", model.SourceSnapshot{}
 	}
-	for _, key := range keys {
-		snapshot, ok := snapshots[key]
-		if !ok {
-			continue
-		}
-		if len(snapshot.Items) > 0 || snapshot.Status != "" {
-			return key, snapshot
-		}
+	if snapshot, ok := snapshots[key]; ok {
+		return key, snapshot
 	}
-	return keys[0], model.SourceSnapshot{}
+	return key, model.SourceSnapshot{}
+}
+
+func selectedSnapshots(leftKey string, left model.SourceSnapshot, rightKey string, right model.SourceSnapshot) map[string]model.SourceSnapshot {
+	selected := make(map[string]model.SourceSnapshot, 2)
+	if leftKey != "" {
+		selected[leftKey] = left
+	}
+	if rightKey != "" {
+		selected[rightKey] = right
+	}
+	return selected
 }
 
 func dashboardOverviewTitle(sourceKey string) string {
@@ -682,6 +688,8 @@ func dashboardOverviewTitle(sourceKey string) string {
 		return "Codex 今日概览"
 	case "sub2api":
 		return "Sub2API 今日概览"
+	case "":
+		return "未配置数据源"
 	default:
 		return sourceKey + " 今日概览"
 	}

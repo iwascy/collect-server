@@ -27,6 +27,7 @@ const (
 
 type Config struct {
 	Server     ServerConfig     `yaml:"server"`
+	Dashboard  DashboardConfig  `yaml:"dashboard"`
 	Collectors CollectorsConfig `yaml:"collectors"`
 	Store      StoreConfig      `yaml:"store"`
 	Log        LogConfig        `yaml:"log"`
@@ -40,6 +41,15 @@ type ServerConfig struct {
 	ReadTimeoutSeconds     int    `yaml:"read_timeout_seconds"`
 	WriteTimeoutSeconds    int    `yaml:"write_timeout_seconds"`
 	ShutdownTimeoutSeconds int    `yaml:"shutdown_timeout_seconds"`
+}
+
+type DashboardConfig struct {
+	Sources DashboardSourceConfig `yaml:"sources"`
+}
+
+type DashboardSourceConfig struct {
+	Claude string `yaml:"claude"`
+	Codex  string `yaml:"codex"`
 }
 
 type CollectorsConfig struct {

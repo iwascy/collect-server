@@ -2,9 +2,15 @@ server:
   port: ${INFOHUB_PORT}
   auth_token: "${INFOHUB_AUTH_TOKEN}"
   dashboard_token: "${INFOHUB_DASHBOARD_TOKEN}"
+  mock_enabled: ${INFOHUB_MOCK_ENABLED}
   read_timeout_seconds: 10
   write_timeout_seconds: 10
   shutdown_timeout_seconds: 10
+
+dashboard:
+  sources:
+    claude: "claude_relay"
+    codex: "sub2api"
 
 collectors:
   claude_relay:
