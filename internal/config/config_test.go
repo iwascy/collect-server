@@ -179,6 +179,36 @@ collectors:
 	}
 }
 
+func TestLoadDefaultsClaudeLocalPaths(t *testing.T) {
+	configPath := writeTempConfig(t, `
+collectors:
+  claude_local:
+    enabled: true
+`)
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("load config failed: %v", err)
+	}
+
+	collector := cfg.Collectors.ClaudeLocal
+	if len(collector.Paths) != 2 {
+		t.Fatalf("unexpected claude local paths: %#v", collector.Paths)
+	}
+	if collector.Paths[0] != "${HOME}/.config/claude/projects" {
+		t.Fatalf("unexpected first claude path: %q", collector.Paths[0])
+	}
+	if collector.Paths[1] != "${HOME}/.claude/projects" {
+		t.Fatalf("unexpected second claude path: %q", collector.Paths[1])
+	}
+	if len(collector.RateLimitPaths) != 2 {
+		t.Fatalf("unexpected claude rate limit paths: %#v", collector.RateLimitPaths)
+	}
+	if collector.RateLimitPaths[0] != "${HOME}/.claude/infohub-rate-limits.json" {
+		t.Fatalf("unexpected first rate limit path: %q", collector.RateLimitPaths[0])
+	}
+}
+
 func writeTempConfig(t *testing.T, content string) string {
 	t.Helper()
 

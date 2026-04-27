@@ -4,8 +4,11 @@
 
 API 配额聚合服务，带有电子墨水屏仪表盘。定时从多个 AI 服务商采集用量指标，持久化快照数据，并提供 REST API 和专为电子墨水屏优化的可视化仪表盘。
 
+<<<<<<< HEAD
+=======
 ![InfoHub 仪表盘](docs/mockups/dashboard.png)
 
+>>>>>>> 0ac6b18c8ae66348f109ff80dfc51e02211b39be
 ## 功能特性
 
 - **多源采集** -- 内置 Claude Relay、Sub2API、飞书及通用 HTTP/JSON 采集器，可轻松扩展

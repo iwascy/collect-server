@@ -4,8 +4,11 @@
 
 API quota aggregation service with e-ink dashboard. Collects usage metrics from multiple AI service providers on a schedule, persists snapshots, and exposes REST APIs plus a visual dashboard optimized for e-paper displays.
 
+<<<<<<< HEAD
+=======
 ![InfoHub Dashboard](docs/mockups/dashboard.png)
 
+>>>>>>> 0ac6b18c8ae66348f109ff80dfc51e02211b39be
 ## Features
 
 - **Multi-source collection** -- pluggable collectors for Claude Relay, Sub2API, Feishu, and generic HTTP/JSON sources, with a simple interface to add more

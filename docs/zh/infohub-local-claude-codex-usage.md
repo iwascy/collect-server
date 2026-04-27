@@ -147,7 +147,11 @@ collectors:
     cron: "*/5 * * * *"
     timeout_seconds: 15
     paths:
-      - "${HOME}/.claude/projects"        # 多路径以支持 Syncthing 等同步场景
+      - "${HOME}/.config/claude/projects" # Claude Code 新版本默认路径
+      - "${HOME}/.claude/projects"        # 旧版本 / 兼容路径
+    rate_limit_paths:                     # statusLine 脚本导出的真实 5H / 7D 额度
+      - "${HOME}/.claude/infohub-rate-limits.json"
+      - "${HOME}/.config/claude/infohub-rate-limits.json"
     mode: "builtin"                        # builtin | ccusage
     ccusage_bin: "npx"                     # ccusage 模式可改成绝对路径
     ccusage_args: ["ccusage@latest", "--json"]
@@ -156,12 +160,12 @@ collectors:
         seconds: 18000
       - name: "today"
         boundary: "local-midnight"
-      - name: "month"
-        boundary: "local-month-start"
+      - name: "weekly"
+        seconds: 604800
     quota:                                 # 经验上限，仅用于进度条；不存在则不显示
       plan: "max-200"                      # 给前端做标签
       five_hour_msg_cap: 800               # 5h 内消息估算上限
-      monthly_msg_cap: null                # 不设上限则隐藏
+      weekly_msg_cap: null                 # 不设上限则隐藏；monthly_msg_cap 仍兼容旧配置
 ```
 
 #### 5.1.2 行为
@@ -171,21 +175,47 @@ collectors:
      SQLite store 下会增量续扫并回放事件表，memory store 下全量扫描
    - 已实现：`mode=ccusage`，`exec.CommandContext(ctx, ccusage_bin, ccusage_args...)`
      拿 stdout，宽容解析输出 JSON 中的 usage rows
+   - 已实现：读取 `rate_limit_paths` 中最新的 Claude Code statusLine JSON，
+     提取 `rate_limits.five_hour.used_percentage` / `resets_at` 与
+     `rate_limits.seven_day.used_percentage` / `resets_at`，作为真实 5H / 7D 剩余额度
 2. 输出多个 `DataItem`，遵循现有 `Source/Category/Title/Value/Extra` 约定：
 
 | Category | Title | Value 示例 | Extra |
 |----------|-------|-----------|-------|
 | `quota` | `5h_window` | `42.3%` | `used_msgs`、`cap`、`window_end_at`、`models{}` |
 | `quota` | `today` | `123,456 tokens` | `input`、`output`、`cache_read`、`cache_creation` |
-| `quota` | `month` | `3.2M tokens` | `cost_usd_estimate`、`days_with_activity` |
+| `quota` | `weekly` | `3.2M tokens` | `messages`、`models` |
 | `usage` | `model_top1` | `opus-4` | `share_percent`、`tokens` |
 | `usage` | `cache_hit` | `78%` | `cache_read`、`total_input` |
 
 3. 失败语义：
    - 路径不存在 → `SourceSnapshot.Status=error`，`Error="claude path missing"`
    - ccusage 不可用 → 自动降级到 `builtin` 模式（一次告警日志）
+   - `rate_limit_paths` 不存在 → 只展示本地估算额度；存在但不可解析 → 记录 warn 后继续采集
 
-#### 5.1.3 builtin 解析最小算法
+#### 5.1.3 Claude Code statusLine 接入
+
+Claude Code 没有公开的非交互订阅额度查询 API。当前实现使用官方 statusLine
+输入里的 `rate_limits` 字段作为本地真实额度来源。可以把仓库内脚本注册到
+Claude Code 配置中：
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "/Users/cyan/code/collect-server/scripts/claude-statusline-infohub.sh"
+  }
+}
+```
+
+脚本会把 Claude Code 传入的完整 statusLine JSON 写到
+`${CLAUDE_INFOHUB_RATE_LIMIT_PATH:-$HOME/.claude/infohub-rate-limits.json}`。
+InfoHub 每次采集会读取 `rate_limit_paths` 中最新且可解析的文件，并以
+`quota_source=claude_statusline` 输出 5H / Week 额度。若没有 `rate_limits`
+字段，说明当前 Claude Code 会话尚未收到带额度信息的响应，采集器会自动回退到
+`quota.*_msg_cap` 的本地估算。
+
+#### 5.1.4 builtin 解析最小算法
 
 ```
 for each *.jsonl in paths (递归):

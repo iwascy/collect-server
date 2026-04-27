@@ -97,6 +97,7 @@ type LocalCollectorConfig struct {
 	Cron           string                 `yaml:"cron"`
 	TimeoutSeconds int                    `yaml:"timeout_seconds"`
 	Paths          []string               `yaml:"paths"`
+	RateLimitPaths []string               `yaml:"rate_limit_paths"`
 	Mode           string                 `yaml:"mode"`
 	CCUsageBin     string                 `yaml:"ccusage_bin"`
 	CCUsageArgs    []string               `yaml:"ccusage_args"`
@@ -359,7 +360,16 @@ func (c *LocalCollectorConfig) applyDefaults(source string) {
 	}
 	if source == "claude_local" {
 		if len(c.Paths) == 0 {
-			c.Paths = []string{"${HOME}/.claude/projects"}
+			c.Paths = []string{
+				"${HOME}/.config/claude/projects",
+				"${HOME}/.claude/projects",
+			}
+		}
+		if len(c.RateLimitPaths) == 0 {
+			c.RateLimitPaths = []string{
+				"${HOME}/.claude/infohub-rate-limits.json",
+				"${HOME}/.config/claude/infohub-rate-limits.json",
+			}
 		}
 		if c.CCUsageBin == "" {
 			c.CCUsageBin = "npx"

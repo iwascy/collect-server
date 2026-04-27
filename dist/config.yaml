@@ -67,11 +67,16 @@ collectors:
     cron: "*/5 * * * *"
     timeout_seconds: 15
     paths:
+      - "${HOME}/.config/claude/projects"
       - "${HOME}/.claude/projects"
+    rate_limit_paths:
+      - "${HOME}/.claude/infohub-rate-limits.json"
+      - "${HOME}/.config/claude/infohub-rate-limits.json"
     mode: "builtin"
     quota:
       plan: "local"
       five_hour_msg_cap: 0
+      weekly_msg_cap: 0
       monthly_msg_cap: 0
 
   codex_local:

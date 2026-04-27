@@ -173,6 +173,64 @@ func TestCodexLocalCollectorCollectsBuiltinJSONL(t *testing.T) {
 	}
 }
 
+func TestClaudeLocalCollectorReadsStatusLineRateLimits(t *testing.T) {
+	dir := t.TempDir()
+	writeJSONLLines(t, filepath.Join(dir, "session.jsonl"),
+		claudeUsageRecord("2026-04-26T11:00:00Z", "claude-sonnet-4-6", 100, 50),
+	)
+
+	rateLimitPath := filepath.Join(t.TempDir(), "infohub-rate-limits.json")
+	if err := os.WriteFile(rateLimitPath, []byte(`{
+		"session_id": "abc",
+		"rate_limits": {
+			"five_hour": {
+				"used_percentage": 42.5,
+				"resets_at": "2026-04-26T13:00:00Z"
+			},
+			"seven_day": {
+				"used_percentage": 70,
+				"resets_at": "2026-04-28T00:00:00Z"
+			}
+		}
+	}`), 0o600); err != nil {
+		t.Fatalf("write rate limits failed: %v", err)
+	}
+
+	collector := NewClaudeLocalCollector(config.LocalCollectorConfig{
+		Paths:          []string{dir},
+		RateLimitPaths: []string{rateLimitPath},
+		Quota: config.LocalQuotaConfig{
+			FiveHourCap: 10,
+			WeeklyCap:   100,
+		},
+	}, nil)
+	collector.now = func() time.Time { return time.Date(2026, 4, 26, 12, 0, 0, 0, time.UTC) }
+
+	items, err := collector.Collect(context.Background())
+	if err != nil {
+		t.Fatalf("collect failed: %v", err)
+	}
+
+	fiveHourQuotaItem := mustFindItem(t, items, "账号 Claude Local 5H 额度")
+	if fiveHourQuotaItem.Value != "57.50%" {
+		t.Fatalf("unexpected 5H quota value: %s", fiveHourQuotaItem.Value)
+	}
+	if got := fiveHourQuotaItem.Extra["quota_source"]; got != "claude_statusline" {
+		t.Fatalf("unexpected 5H quota source: %v", got)
+	}
+	if got := fiveHourQuotaItem.Extra["reset_at"]; got != "2026-04-26T13:00:00Z" {
+		t.Fatalf("unexpected 5H reset_at: %v", got)
+	}
+
+	weeklyQuotaItem := mustFindItem(t, items, "账号 Claude Local Week 额度")
+	if weeklyQuotaItem.Value != "30%" {
+		t.Fatalf("unexpected weekly quota value: %s", weeklyQuotaItem.Value)
+	}
+	if got := weeklyQuotaItem.Extra["quota_source"]; got != "claude_statusline" {
+		t.Fatalf("unexpected weekly quota source: %v", got)
+	}
+}
+
 func TestCodexLocalCollectorOnlineQuotaFallback(t *testing.T) {
 	dir := t.TempDir()
 	writeJSONLLines(t, filepath.Join(dir, "rollout-1.jsonl"),

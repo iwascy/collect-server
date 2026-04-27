@@ -25,7 +25,7 @@ const (
 	localClaudeSource = "claude_local"
 	localCodexSource  = "codex_local"
 
-	localClaudeParserVersion = 0
+	localClaudeParserVersion = 1
 	localCodexParserVersion  = 1
 )
 
@@ -607,6 +607,127 @@ func extractCodexRateLimit(rateLimits map[string]any, key string) localQuotaObse
 	return observation
 }
 
+func (c *LocalUsageCollector) readClaudeStatusLineRateLimits() (localRateLimits, bool, error) {
+	if c.source != localClaudeSource {
+		return localRateLimits{}, false, nil
+	}
+
+	var (
+		latestLimits localRateLimits
+		latestMTime  time.Time
+		found        bool
+		lastErr      error
+	)
+	for _, path := range expandedLocalPaths(c.cfg.RateLimitPaths) {
+		info, err := os.Stat(path)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				lastErr = fmt.Errorf("stat %s: %w", path, err)
+			}
+			continue
+		}
+		if info.IsDir() {
+			continue
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			lastErr = fmt.Errorf("read %s: %w", path, err)
+			continue
+		}
+		limits, ok, err := parseClaudeStatusLineRateLimits(content)
+		if err != nil {
+			lastErr = fmt.Errorf("parse %s: %w", path, err)
+			continue
+		}
+		if !ok {
+			continue
+		}
+		if !found || info.ModTime().After(latestMTime) {
+			latestLimits = limits
+			latestMTime = info.ModTime()
+			found = true
+		}
+	}
+	if found {
+		return latestLimits, true, nil
+	}
+	return localRateLimits{}, false, lastErr
+}
+
+func parseClaudeStatusLineRateLimits(content []byte) (localRateLimits, bool, error) {
+	trimmed := strings.TrimSpace(string(content))
+	if trimmed == "" {
+		return localRateLimits{}, false, nil
+	}
+
+	var decoded any
+	decoder := json.NewDecoder(strings.NewReader(trimmed))
+	decoder.UseNumber()
+	if err := decoder.Decode(&decoded); err != nil {
+		return localRateLimits{}, false, err
+	}
+
+	record, ok := decoded.(map[string]any)
+	if !ok {
+		return localRateLimits{}, false, nil
+	}
+
+	rateLimits := record
+	if nested, ok := firstNestedMap(record, "rate_limits", "rateLimits"); ok {
+		rateLimits = nested
+	}
+
+	limits := localRateLimits{
+		FiveHour: extractClaudeStatusLineRateLimit(rateLimits, "five_hour", "fiveHour", "5h", "primary"),
+		Week:     extractClaudeStatusLineRateLimit(rateLimits, "seven_day", "sevenDay", "7d", "weekly", "week", "secondary"),
+	}
+	return limits, limits.hasAny(), nil
+}
+
+func extractClaudeStatusLineRateLimit(rateLimits map[string]any, keys ...string) localQuotaObservation {
+	limit, ok := firstNestedMap(rateLimits, keys...)
+	if !ok {
+		return localQuotaObservation{}
+	}
+
+	var (
+		used   float64
+		hasUse bool
+	)
+	for _, key := range []string{"used_percentage", "usedPercent", "used_percent", "percent_used", "percentage"} {
+		if value, ok := floatValue(limit[key]); ok {
+			used = value
+			hasUse = true
+			break
+		}
+	}
+	if !hasUse {
+		for _, key := range []string{"remaining_percentage", "remainingPercent", "remaining_percent"} {
+			if value, ok := floatValue(limit[key]); ok {
+				used = 100 - value
+				hasUse = true
+				break
+			}
+		}
+	}
+	if !hasUse {
+		return localQuotaObservation{}
+	}
+
+	observation := localQuotaObservation{
+		OK:          true,
+		UsedPercent: used,
+	}
+	for _, key := range []string{"resets_at", "reset_at", "resetsAt", "resetAt"} {
+		if reset, ok := parseEventTime(limit[key]); ok {
+			observation.ResetAt = reset.Format(time.RFC3339)
+			break
+		}
+	}
+	return observation
+}
+
 func parseCCUsageEvents(payload []byte, fallbackTime time.Time) ([]localUsageEvent, error) {
 	var decoded any
 	decoder := json.NewDecoder(strings.NewReader(string(payload)))
@@ -705,6 +826,22 @@ func (c *LocalUsageCollector) buildItems(ctx context.Context, events []localUsag
 	}
 	if latestQuota.Week.OK {
 		quotaSourceForWindow["Week"] = "codex_rate_limits"
+	}
+	if c.source == localClaudeSource {
+		limits, ok, err := c.readClaudeStatusLineRateLimits()
+		if err != nil && c.logger != nil {
+			c.logger.Warn("claude statusline quota unavailable", "error", err)
+		}
+		if ok {
+			if limits.FiveHour.OK {
+				latestQuota.FiveHour = limits.FiveHour
+				quotaSourceForWindow["5H"] = "claude_statusline"
+			}
+			if limits.Week.OK {
+				latestQuota.Week = limits.Week
+				quotaSourceForWindow["Week"] = "claude_statusline"
+			}
+		}
 	}
 	onlineQuotaStatus := ""
 	if c.source == localCodexSource {
@@ -826,7 +963,11 @@ func (c *LocalUsageCollector) quotaItem(window localWindow, bucket *localUsageBu
 		usedPercent = observed.UsedPercent
 		quotaSource = strings.TrimSpace(observedSource)
 		if quotaSource == "" {
-			quotaSource = "codex_rate_limits"
+			if c.source == localClaudeSource {
+				quotaSource = "claude_statusline"
+			} else {
+				quotaSource = "codex_rate_limits"
+			}
 		}
 		if strings.TrimSpace(observed.ResetAt) != "" {
 			resetAt = observed.ResetAt
@@ -844,7 +985,7 @@ func (c *LocalUsageCollector) quotaItem(window localWindow, bucket *localUsageBu
 		"window_end_at":     window.End.Format(time.RFC3339),
 		"reset_at":          resetAt,
 		"models":            bucket.Models,
-		"approx":            true,
+		"approx":            !observed.OK,
 		"quota_source":      quotaSource,
 	}
 	if c.source == localCodexSource {
@@ -885,7 +1026,6 @@ func (c *LocalUsageCollector) windowUsageItem(window localWindow, bucket *localU
 func (c *LocalUsageCollector) windows(now time.Time) []localWindow {
 	localNow := now.In(time.Local)
 	todayStart := time.Date(localNow.Year(), localNow.Month(), localNow.Day(), 0, 0, 0, 0, time.Local)
-	monthStart := time.Date(localNow.Year(), localNow.Month(), 1, 0, 0, 0, 0, time.Local)
 
 	if c.source == localCodexSource {
 		weekday := int(localNow.Weekday())
@@ -906,18 +1046,25 @@ func (c *LocalUsageCollector) windows(now time.Time) []localWindow {
 		}
 	}
 
-	monthCap := c.cfg.Quota.MonthlyCap
+	weeklyCap := c.cfg.Quota.WeeklyCap
+	if weeklyCap <= 0 {
+		weeklyCap = c.cfg.Quota.MonthlyCap
+	}
 	return []localWindow{
 		{Key: "5h", Label: "5H", Title: "5H 用量", Start: now.Add(-5 * time.Hour), End: now, QuotaCap: c.cfg.Quota.FiveHourCap, QuotaUnit: "messages"},
 		{Key: "today", Label: "Today", Title: "今日用量", Start: todayStart, End: todayStart.AddDate(0, 0, 1), QuotaUnit: "tokens"},
-		{Key: "month", Label: "Week", Title: "本月用量", Start: monthStart, End: monthStart.AddDate(0, 1, 0), QuotaCap: monthCap, QuotaUnit: "messages"},
+		{Key: "weekly", Label: "Week", Title: "7D 用量", Start: now.AddDate(0, 0, -7), End: now, QuotaCap: weeklyCap, QuotaUnit: "messages"},
 	}
 }
 
 func (c *LocalUsageCollector) expandedPaths() []string {
+	return expandedLocalPaths(c.cfg.Paths)
+}
+
+func expandedLocalPaths(rawPaths []string) []string {
 	seen := map[string]struct{}{}
-	paths := make([]string, 0, len(c.cfg.Paths))
-	for _, raw := range c.cfg.Paths {
+	paths := make([]string, 0, len(rawPaths))
+	for _, raw := range rawPaths {
 		path := strings.TrimSpace(os.ExpandEnv(raw))
 		if strings.HasPrefix(path, "~/") {
 			if home, err := os.UserHomeDir(); err == nil {

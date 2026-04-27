@@ -1,0 +1,63 @@
+sequenceDiagram
+    title InfoHub 设备-后端-CRS-Sub2API 调用链路
+
+    participant Device as Device<br/>ESPHome 墨水屏
+    participant Backend as Backend<br/>InfoHub Server
+    participant CRS as CRS<br/>Claude Relay
+    participant Sub2API as Sub2API<br/>Codex Proxy
+
+    %% Background data collection
+    loop Every 10 min (Cron Scheduler)
+
+        par Claude Relay Collection
+            Backend->>Backend: Trigger ClaudeRelayCollector
+
+            Backend->>CRS: POST /web/auth/login
+            CRS-->>Backend: Bearer Token
+
+            Backend->>CRS: GET /admin/claude-accounts
+            CRS-->>Backend: Account List (active only)
+
+            Backend->>CRS: GET /admin/claude-accounts/usage
+            CRS-->>Backend: Quota & Usage Data
+
+            Note over Backend: Parse quota (5h/7d window)<br/>Extract token usage & costs
+
+            Backend->>Backend: Save DataItems to SQLite
+
+        and Sub2API Collection
+            Backend->>Backend: Trigger Sub2APICollector
+
+            Backend->>Sub2API: POST /login (credentials)
+            Sub2API-->>Backend: Bearer Token
+
+            Backend->>Sub2API: GET /api/v1/admin/accounts<br/>?platform=openai&type=oauth&status=active
+            Sub2API-->>Backend: Account List + IDs
+
+            Backend->>Sub2API: POST /api/v1/admin/accounts<br/>/today-stats/batch {account_ids}
+            Sub2API-->>Backend: Daily Stats (tokens, costs)
+
+            Note over Backend: Parse quota (5h/7d window)<br/>Extract token usage & costs
+
+            Backend->>Backend: Save DataItems to SQLite
+
+        end
+
+    end
+
+    %% Device request flow
+    rect rgb(240, 248, 255)
+        Note over Device,Backend: On-Demand Device Request
+
+        Device->>Backend: GET /dashboard/eink/device.json?token=xxx
+
+        Backend->>Backend: Authenticate dashboard token
+
+        Backend->>Backend: Read snapshots from Store
+
+        Note over Backend: buildEInkDevicePayload()<br/>Aggregate claude_relay + sub2api
+
+        Backend-->>Device: JSON Response<br/>{claude, codex, total, refreshSeconds}
+
+        Note over Device: Render on e-ink display
+    end
