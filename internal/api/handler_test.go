@@ -717,6 +717,88 @@ func TestEInkDashboardDataPrioritizesClaudeAlertWhenRemainingTies(t *testing.T) 
 	}
 }
 
+func TestEInkDashboardMarksLocalQuotaWithoutCapUnknown(t *testing.T) {
+	dataStore := store.NewMemoryStore()
+	mustSaveSnapshot(t, dataStore, "claude_local", []model.DataItem{
+		{
+			Source:    "claude_local",
+			Category:  "token_usage",
+			Title:     "今日 Token 用量",
+			Value:     "10120138",
+			FetchedAt: 1777265700,
+			Extra: map[string]any{
+				"daily_cost":       0,
+				"daily_requests":   160,
+				"enabled_accounts": 1,
+			},
+		},
+		{
+			Source:    "claude_local",
+			Category:  "quota",
+			Title:     "账号 Claude Local 5H 额度",
+			Value:     "100%",
+			FetchedAt: 1777265700,
+			Extra: map[string]any{
+				"cap":               0,
+				"quota_source":      "estimated_cap",
+				"remaining_percent": 100,
+				"window":            "5H",
+			},
+		},
+		{
+			Source:    "claude_local",
+			Category:  "quota",
+			Title:     "账号 Claude Local Week 额度",
+			Value:     "100%",
+			FetchedAt: 1777265700,
+			Extra: map[string]any{
+				"cap":               0,
+				"quota_source":      "estimated_cap",
+				"remaining_percent": 100,
+				"window":            "Week",
+			},
+		},
+	})
+
+	handler := NewHandler(dataStore, collector.NewRegistry(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/dashboard/eink.json", nil)
+	rec := httptest.NewRecorder()
+	handler.EInkDashboardData(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: %d", rec.Code)
+	}
+
+	var payload struct {
+		Alerts      []string `json:"alerts"`
+		ClaudeTable struct {
+			Rows []struct {
+				FiveHour struct {
+					Text string `json:"text"`
+				} `json:"five_hour"`
+				Week struct {
+					Text string `json:"text"`
+				} `json:"week"`
+				Status string `json:"status"`
+			} `json:"rows"`
+		} `json:"claude_table"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response failed: %v", err)
+	}
+
+	if len(payload.ClaudeTable.Rows) != 1 {
+		t.Fatalf("unexpected claude rows: %+v", payload.ClaudeTable.Rows)
+	}
+	row := payload.ClaudeTable.Rows[0]
+	if row.FiveHour.Text != "--" || row.Week.Text != "--" || row.Status != "额度未知" {
+		t.Fatalf("unexpected unknown local quota row: %+v", row)
+	}
+	if len(payload.Alerts) != 1 || payload.Alerts[0] != "Claude Local：额度未知" {
+		t.Fatalf("unexpected alerts: %+v", payload.Alerts)
+	}
+}
+
 func TestEInkDeviceDataReturnsMockPayloadWhenEnabled(t *testing.T) {
 	dataStore := store.NewMemoryStore()
 	if err := dataStore.Save("sub2api", []model.DataItem{

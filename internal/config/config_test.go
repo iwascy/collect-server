@@ -146,6 +146,63 @@ collectors:
 	}
 }
 
+func TestLoadDefaultsCodexOnlineDisabled(t *testing.T) {
+	configPath := writeTempConfig(t, `
+collectors:
+  codex_local:
+    enabled: true
+`)
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("load config failed: %v", err)
+	}
+
+	online := cfg.Collectors.CodexLocal.Online
+	if online.Enabled {
+		t.Fatal("codex online quota should default to disabled")
+	}
+	if online.BaseURL != "https://chatgpt.com" {
+		t.Fatalf("unexpected base url: %q", online.BaseURL)
+	}
+	if online.TimeoutSeconds != 8 {
+		t.Fatalf("unexpected timeout: %d", online.TimeoutSeconds)
+	}
+	if online.StaleAfterSec != 60 {
+		t.Fatalf("unexpected stale_after_seconds: %d", online.StaleAfterSec)
+	}
+	if online.UserAgent != "infohub-codex-quota/1.0" {
+		t.Fatalf("unexpected user agent: %q", online.UserAgent)
+	}
+	if online.AuthPath == "" {
+		t.Fatal("expected default auth path")
+	}
+}
+
+func TestLoadDefaultsClaudeLocalPaths(t *testing.T) {
+	configPath := writeTempConfig(t, `
+collectors:
+  claude_local:
+    enabled: true
+`)
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("load config failed: %v", err)
+	}
+
+	collector := cfg.Collectors.ClaudeLocal
+	if len(collector.Paths) != 2 {
+		t.Fatalf("unexpected claude local paths: %#v", collector.Paths)
+	}
+	if collector.Paths[0] != "${HOME}/.config/claude/projects" {
+		t.Fatalf("unexpected first claude path: %q", collector.Paths[0])
+	}
+	if collector.Paths[1] != "${HOME}/.claude/projects" {
+		t.Fatalf("unexpected second claude path: %q", collector.Paths[1])
+	}
+}
+
 func writeTempConfig(t *testing.T, content string) string {
 	t.Helper()
 

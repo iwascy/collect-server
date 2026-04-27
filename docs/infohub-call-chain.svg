@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 890.068 1255" width="890.068" height="1255" style="--bg:#ffffff;--fg:#1f2328;--line:#d1d9e0;--accent:#0969da;--muted:#59636e;background:var(--bg)">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
+  text { font-family: 'Inter', system-ui, sans-serif; }
+  svg {
+    /* Derived from --bg and --fg (overridable via --line, --accent, etc.) */
+    --_text:          var(--fg);
+    --_text-sec:      var(--muted, color-mix(in srgb, var(--fg) 60%, var(--bg)));
+    --_text-muted:    var(--muted, color-mix(in srgb, var(--fg) 40%, var(--bg)));
+    --_text-faint:    color-mix(in srgb, var(--fg) 25%, var(--bg));
+    --_line:          var(--line, color-mix(in srgb, var(--fg) 50%, var(--bg)));
+    --_arrow:         var(--accent, color-mix(in srgb, var(--fg) 85%, var(--bg)));
+    --_node-fill:     var(--surface, color-mix(in srgb, var(--fg) 3%, var(--bg)));
+    --_node-stroke:   var(--border, color-mix(in srgb, var(--fg) 20%, var(--bg)));
+    --_group-fill:    var(--bg);
+    --_group-hdr:     color-mix(in srgb, var(--fg) 5%, var(--bg));
+    --_inner-stroke:  color-mix(in srgb, var(--fg) 12%, var(--bg));
+    --_key-badge:     color-mix(in srgb, var(--fg) 10%, var(--bg));
+  }
+</style>
+<defs>
+  <marker id="seq-arrow" markerWidth="8" markerHeight="5" refX="8" refY="2.5" orient="auto-start-reverse">
+    <polygon points="0 0, 8 2.5, 0 5" fill="var(--_arrow)" />
+  </marker>
+  <marker id="seq-arrow-open" markerWidth="8" markerHeight="5" refX="8" refY="2.5" orient="auto-start-reverse">
+    <polyline points="0 0, 8 2.5, 0 5" fill="none" stroke="var(--_arrow)" stroke-width="1" />
+  </marker>
+</defs>
+<g class="block" data-type="par" data-label="Claude Relay Collection">
+  <rect x="258.81899999999996" y="78" width="601.249" height="804" rx="0" ry="0" fill="none" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="258.81899999999996" y="78" width="167.46999999999997" height="18" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="264.81899999999996" y="87" font-size="11" font-weight="600" fill="var(--_text-sec)" dy="3.8499999999999996">par [Claude Relay Collection]</text>
+  <line x1="258.81899999999996" y1="509" x2="860.068" y2="509" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+  <text x="266.81899999999996" y="523" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">[Sub2API Collection]</text>
+</g>
+<g class="block" data-type="loop" data-label="Every 10 min (Cron Scheduler)">
+  <rect x="258.81899999999996" y="78" width="601.249" height="804" rx="0" ry="0" fill="none" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="258.81899999999996" y="78" width="204.43" height="18" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="264.81899999999996" y="87" font-size="11" font-weight="600" fill="var(--_text-sec)" dy="3.8499999999999996">loop [Every 10 min (Cron Scheduler)]</text>
+</g>
+<g class="block" data-type="rect" data-label="rgb(240, 248, 255)">
+  <rect x="30" y="935" width="433.192" height="255" rx="0" ry="0" fill="none" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="30" y="935" width="141.07000000000002" height="18" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="36" y="944" font-size="11" font-weight="600" fill="var(--_text-sec)" dy="3.8499999999999996">rect [rgb(240, 248, 255)]</text>
+</g>
+<line class="lifeline" data-actor="Device" x1="134.40949999999998" y1="70" x2="134.40949999999998" y2="1225" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<line class="lifeline" data-actor="Backend" x1="361.0055" y1="70" x2="361.0055" y2="1225" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<line class="lifeline" data-actor="CRS" x1="566.1125" y1="70" x2="566.1125" y2="1225" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<line class="lifeline" data-actor="Sub2API" x1="764.5504999999999" y1="70" x2="764.5504999999999" y2="1225" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<g class="message" data-from="Backend" data-to="Backend" data-label="Trigger ClaudeRelayCollector" data-line-style="solid" data-arrow-head="filled" data-self="true">
+  <polyline points="361.0055,118 391.0055,118 391.0055,138 361.0055,138" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="399.0055" y="128" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Trigger ClaudeRelayCollector</text>
+</g>
+<g class="message" data-from="Backend" data-to="CRS" data-label="POST /web/auth/login" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="361.0055" y1="188" x2="566.1125" y2="188" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="463.55899999999997" y="178" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">POST /web/auth/login</text>
+</g>
+<g class="message" data-from="CRS" data-to="Backend" data-label="Bearer Token" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="566.1125" y1="228" x2="361.0055" y2="228" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="463.55899999999997" y="218" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Bearer Token</text>
+</g>
+<g class="message" data-from="Backend" data-to="CRS" data-label="GET /admin/claude-accounts" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="361.0055" y1="268" x2="566.1125" y2="268" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="463.55899999999997" y="258" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">GET /admin/claude-accounts</text>
+</g>
+<g class="message" data-from="CRS" data-to="Backend" data-label="Account List (active only)" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="566.1125" y1="308" x2="361.0055" y2="308" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="463.55899999999997" y="298" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Account List (active only)</text>
+</g>
+<g class="message" data-from="Backend" data-to="CRS" data-label="GET /admin/claude-accounts/usage" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="361.0055" y1="348" x2="566.1125" y2="348" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="463.55899999999997" y="338" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">GET /admin/claude-accounts/usage</text>
+</g>
+<g class="message" data-from="CRS" data-to="Backend" data-label="Quota &amp; Usage Data" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="566.1125" y1="388" x2="361.0055" y2="388" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="463.55899999999997" y="378" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Quota &amp; Usage Data</text>
+</g>
+<g class="message" data-from="Backend" data-to="Backend" data-label="Save DataItems to SQLite" data-line-style="solid" data-arrow-head="filled" data-self="true">
+  <polyline points="361.0055,443 391.0055,443 391.0055,463 361.0055,463" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="399.0055" y="453" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Save DataItems to SQLite</text>
+</g>
+<g class="message" data-from="Backend" data-to="Backend" data-label="Trigger Sub2APICollector" data-line-style="solid" data-arrow-head="filled" data-self="true">
+  <polyline points="361.0055,537 391.0055,537 391.0055,557 361.0055,557" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="399.0055" y="547" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Trigger Sub2APICollector</text>
+</g>
+<g class="message" data-from="Backend" data-to="Sub2API" data-label="POST /login (credentials)" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="361.0055" y1="607" x2="764.5504999999999" y2="607" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="562.778" y="597" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">POST /login (credentials)</text>
+</g>
+<g class="message" data-from="Sub2API" data-to="Backend" data-label="Bearer Token" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="764.5504999999999" y1="647" x2="361.0055" y2="647" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="562.778" y="637" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Bearer Token</text>
+</g>
+<g class="message" data-from="Backend" data-to="Sub2API" data-label="GET /api/v1/admin/accounts
+?platform=openai&amp;type=oauth&amp;status=active" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="361.0055" y1="687" x2="764.5504999999999" y2="687" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="562.778" y="677" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)"><tspan x="562.778" dy="-3.3000000000000007">GET /api/v1/admin/accounts</tspan><tspan x="562.778" dy="14.3">?platform=openai&amp;type=oauth&amp;status=active</tspan></text>
+</g>
+<g class="message" data-from="Sub2API" data-to="Backend" data-label="Account List + IDs" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="764.5504999999999" y1="727" x2="361.0055" y2="727" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="562.778" y="717" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Account List + IDs</text>
+</g>
+<g class="message" data-from="Backend" data-to="Sub2API" data-label="POST /api/v1/admin/accounts
+/today-stats/batch {account_ids}" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="361.0055" y1="767" x2="764.5504999999999" y2="767" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="562.778" y="757" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)"><tspan x="562.778" dy="-3.3000000000000007">POST /api/v1/admin/accounts</tspan><tspan x="562.778" dy="14.3">/today-stats/batch {account_ids}</tspan></text>
+</g>
+<g class="message" data-from="Sub2API" data-to="Backend" data-label="Daily Stats (tokens, costs)" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="764.5504999999999" y1="807" x2="361.0055" y2="807" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="562.778" y="797" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Daily Stats (tokens, costs)</text>
+</g>
+<g class="message" data-from="Backend" data-to="Backend" data-label="Save DataItems to SQLite" data-line-style="solid" data-arrow-head="filled" data-self="true">
+  <polyline points="361.0055,862 391.0055,862 391.0055,882 361.0055,882" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="399.0055" y="872" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Save DataItems to SQLite</text>
+</g>
+<g class="message" data-from="Device" data-to="Backend" data-label="GET /dashboard/eink/device.json?token=xxx" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="134.40949999999998" y1="975" x2="361.0055" y2="975" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="247.70749999999998" y="965" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">GET /dashboard/eink/device.json?token=xxx</text>
+</g>
+<g class="message" data-from="Backend" data-to="Backend" data-label="Authenticate dashboard token" data-line-style="solid" data-arrow-head="filled" data-self="true">
+  <polyline points="361.0055,1015 391.0055,1015 391.0055,1035 361.0055,1035" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="399.0055" y="1025" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Authenticate dashboard token</text>
+</g>
+<g class="message" data-from="Backend" data-to="Backend" data-label="Read snapshots from Store" data-line-style="solid" data-arrow-head="filled" data-self="true">
+  <polyline points="361.0055,1085 391.0055,1085 391.0055,1105 361.0055,1105" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="399.0055" y="1095" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Read snapshots from Store</text>
+</g>
+<g class="message" data-from="Backend" data-to="Device" data-label="JSON Response
+{claude, codex, total, refreshSeconds}" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="361.0055" y1="1170" x2="134.40949999999998" y2="1170" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="247.70749999999998" y="1160" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)"><tspan x="247.70749999999998" dy="-3.3000000000000007">JSON Response</tspan><tspan x="247.70749999999998" dy="14.3">{claude, codex, total, refreshSeconds}</tspan></text>
+</g>
+<g class="note" data-position="over" data-actors="Backend">
+  <polygon points="216.31250000000003,396 499.69849999999997,396 505.69849999999997,402 505.69849999999997,419 216.31250000000003,419" fill="var(--bg)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <polygon points="499.69849999999997,396 505.69849999999997,402 499.69849999999997,402" fill="var(--_inner-stroke)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="361.0055" y="407.5" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)"><tspan x="361.0055" dy="-3.3000000000000007">Parse quota (5h/7d window)</tspan><tspan x="361.0055" dy="14.3">Extract token usage &amp; costs</tspan></text>
+</g>
+<g class="note" data-position="over" data-actors="Backend">
+  <polygon points="216.31250000000003,815 499.69849999999997,815 505.69849999999997,821 505.69849999999997,838 216.31250000000003,838" fill="var(--bg)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <polygon points="499.69849999999997,815 505.69849999999997,821 499.69849999999997,821" fill="var(--_inner-stroke)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="361.0055" y="826.5" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)"><tspan x="361.0055" dy="-3.3000000000000007">Parse quota (5h/7d window)</tspan><tspan x="361.0055" dy="14.3">Extract token usage &amp; costs</tspan></text>
+</g>
+<g class="note" data-position="over" data-actors="Device,Backend">
+  <polygon points="169.83949999999996,900 319.57550000000003,900 325.57550000000003,906 325.57550000000003,923 169.83949999999996,923" fill="var(--bg)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <polygon points="319.57550000000003,900 325.57550000000003,906 319.57550000000003,906" fill="var(--_inner-stroke)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="247.70749999999998" y="911.5" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">On-Demand Device Request</text>
+</g>
+<g class="note" data-position="over" data-actors="Backend">
+  <polygon points="202.94750000000002,1123 513.0635,1123 519.0635,1129 519.0635,1146 202.94750000000002,1146" fill="var(--bg)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <polygon points="513.0635,1123 519.0635,1129 513.0635,1129" fill="var(--_inner-stroke)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="361.0055" y="1134.5" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)"><tspan x="361.0055" dy="-3.3000000000000007">buildEInkDevicePayload()</tspan><tspan x="361.0055" dy="14.3">Aggregate claude_relay + sub2api</tspan></text>
+</g>
+<g class="note" data-position="over" data-actors="Device">
+  <polygon points="66.34249999999997,1178 196.4765,1178 202.4765,1184 202.4765,1201 66.34249999999997,1201" fill="var(--bg)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <polygon points="196.4765,1178 202.4765,1184 196.4765,1184" fill="var(--_inner-stroke)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="134.40949999999998" y="1189.5" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Render on e-ink display</text>
+</g>
+<g class="actor" data-id="Device" data-label="Device
+ESPHome 墨水屏" data-type="participant">
+  <rect x="40" y="30" width="188.81899999999996" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="134.40949999999998" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)"><tspan x="134.40949999999998" dy="-3.9000000000000012">Device</tspan><tspan x="134.40949999999998" dy="16.900000000000002">ESPHome 墨水屏</tspan></text>
+</g>
+<g class="actor" data-id="Backend" data-label="Backend
+InfoHub Server" data-type="participant">
+  <rect x="268.81899999999996" y="30" width="184.373" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="361.0055" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)"><tspan x="361.0055" dy="-3.9000000000000012">Backend</tspan><tspan x="361.0055" dy="16.900000000000002">InfoHub Server</tspan></text>
+</g>
+<g class="actor" data-id="CRS" data-label="CRS
+Claude Relay" data-type="participant">
+  <rect x="493.19199999999995" y="30" width="145.84099999999998" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="566.1125" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)"><tspan x="566.1125" dy="-3.9000000000000012">CRS</tspan><tspan x="566.1125" dy="16.900000000000002">Claude Relay</tspan></text>
+</g>
+<g class="actor" data-id="Sub2API" data-label="Sub2API
+Codex Proxy" data-type="participant">
+  <rect x="679.0329999999999" y="30" width="171.03499999999997" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="764.5504999999999" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)"><tspan x="764.5504999999999" dy="-3.9000000000000012">Sub2API</tspan><tspan x="764.5504999999999" dy="16.900000000000002">Codex Proxy</tspan></text>
+</g>
+</svg>
