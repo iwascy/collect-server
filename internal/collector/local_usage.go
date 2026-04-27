@@ -819,6 +819,7 @@ func (c *LocalUsageCollector) buildItems(ctx context.Context, events []localUsag
 			buckets[window.Key].add(event)
 		}
 	}
+	latestQuota = discardExpiredRateLimits(latestQuota, now)
 
 	quotaSourceForWindow := map[string]string{}
 	if latestQuota.FiveHour.OK {
@@ -833,6 +834,7 @@ func (c *LocalUsageCollector) buildItems(ctx context.Context, events []localUsag
 			c.logger.Warn("claude statusline quota unavailable", "error", err)
 		}
 		if ok {
+			limits = discardExpiredRateLimits(limits, now)
 			if limits.FiveHour.OK {
 				latestQuota.FiveHour = limits.FiveHour
 				quotaSourceForWindow["5H"] = "claude_statusline"
@@ -859,6 +861,7 @@ func (c *LocalUsageCollector) buildItems(ctx context.Context, events []localUsag
 				}
 				if ok {
 					onlineQuotaStatus = codexOnlineQuotaStatusOK
+					onlineLimits = discardExpiredRateLimits(onlineLimits, now)
 					if !latestQuota.FiveHour.OK && onlineLimits.FiveHour.OK {
 						latestQuota.FiveHour = onlineLimits.FiveHour
 						quotaSourceForWindow["5H"] = "codex_wham_usage"
@@ -1137,6 +1140,24 @@ func (q localRateLimits) forWindow(window string) localQuotaObservation {
 	default:
 		return localQuotaObservation{}
 	}
+}
+
+func discardExpiredRateLimits(limits localRateLimits, now time.Time) localRateLimits {
+	if quotaObservationExpired(limits.FiveHour, now) {
+		limits.FiveHour = localQuotaObservation{}
+	}
+	if quotaObservationExpired(limits.Week, now) {
+		limits.Week = localQuotaObservation{}
+	}
+	return limits
+}
+
+func quotaObservationExpired(observation localQuotaObservation, now time.Time) bool {
+	if !observation.OK || strings.TrimSpace(observation.ResetAt) == "" {
+		return false
+	}
+	resetAt, ok := parseEventTime(observation.ResetAt)
+	return ok && !resetAt.After(now)
 }
 
 func quotaUsedOrMissing(observation localQuotaObservation) float64 {

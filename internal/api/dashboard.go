@@ -850,8 +850,9 @@ func buildQuotaAccounts(items []model.DataItem, sourceKey string) ([]quotaAccoun
 			QuotaSource:      stringExtra(item.Extra, "quota_source"),
 			OnlineStatus:     stringExtra(item.Extra, "online_quota_status"),
 		}
-		if sourceKey == "codex_local" && metric.QuotaSource == "estimated_cap" && numericExtra(item.Extra, "cap") <= 0 {
+		if isLocalQuotaSource(sourceKey) && metric.QuotaSource == "estimated_cap" && numericExtra(item.Extra, "cap") <= 0 {
 			metric.Unknown = true
+			metric.ResetAt = ""
 		}
 
 		switch window {
@@ -968,6 +969,9 @@ func buildAlert(account quotaAccount, sourceKey string) (string, bool, bool) {
 
 	switch {
 	case account.FiveHour.Unknown || account.Week.Unknown:
+		if sourceKey == "claude_local" {
+			return fmt.Sprintf("%s：额度未知", displayName), false, true
+		}
 		return fmt.Sprintf("%s：在线额度%s", displayName, codexOnlineQuotaAlertLabel(account.FiveHour.OnlineStatus, account.Week.OnlineStatus)), false, true
 	case account.Week.RemainingPercent <= 0:
 		return fmt.Sprintf("%s：Week 余量 %d%%", displayName, account.Week.RemainingPercent), true, true
@@ -978,6 +982,10 @@ func buildAlert(account quotaAccount, sourceKey string) (string, bool, bool) {
 	default:
 		return "", false, false
 	}
+}
+
+func isLocalQuotaSource(sourceKey string) bool {
+	return sourceKey == "claude_local" || sourceKey == "codex_local"
 }
 
 func codexOnlineQuotaStatusLabel(statuses ...string) string {

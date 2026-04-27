@@ -346,6 +346,73 @@ func TestCodexLocalCollectorOnlinePrefersRolloutWhenAvailable(t *testing.T) {
 	}
 }
 
+func TestCodexLocalCollectorIgnoresExpiredRolloutQuota(t *testing.T) {
+	dir := t.TempDir()
+	writeJSONLLines(t, filepath.Join(dir, "rollout-1.jsonl"),
+		map[string]any{
+			"timestamp": "2026-04-26T11:30:00Z",
+			"type":      "event_msg",
+			"payload": map[string]any{
+				"type": "token_count",
+				"info": map[string]any{
+					"last_token_usage": map[string]any{
+						"input_tokens":  100,
+						"output_tokens": 20,
+						"total_tokens":  120,
+					},
+				},
+				"rate_limits": map[string]any{
+					"primary": map[string]any{
+						"used_percent": 60,
+						"resets_at":    "2026-03-16T20:51:53+08:00",
+					},
+					"secondary": map[string]any{
+						"used_percent": 63,
+						"resets_at":    "2026-03-20T12:00:37+08:00",
+					},
+				},
+			},
+		},
+	)
+
+	collector := NewCodexLocalCollector(config.LocalCollectorConfig{
+		Paths: []string{dir},
+	}, nil)
+	collector.now = func() time.Time { return time.Date(2026, 4, 26, 12, 0, 0, 0, time.UTC) }
+	collector.onlineCodexQuota = &fakeCodexOnlineQuotaFetcher{
+		status: codexOnlineQuotaStatusOK,
+		ok:     true,
+		limits: localRateLimits{
+			FiveHour: localQuotaObservation{OK: true, UsedPercent: 15, ResetAt: "2026-04-26T13:00:00Z"},
+			Week:     localQuotaObservation{OK: true, UsedPercent: 20, ResetAt: "2026-04-28T00:00:00Z"},
+		},
+	}
+
+	items, err := collector.Collect(context.Background())
+	if err != nil {
+		t.Fatalf("collect failed: %v", err)
+	}
+
+	fiveHourQuotaItem := mustFindItem(t, items, "账号 Codex Local 5H 额度")
+	if fiveHourQuotaItem.Value != "85%" {
+		t.Fatalf("unexpected 5H quota value: %s", fiveHourQuotaItem.Value)
+	}
+	if got := fiveHourQuotaItem.Extra["quota_source"]; got != "codex_wham_usage" {
+		t.Fatalf("unexpected 5H quota source: %v", got)
+	}
+	if got := fiveHourQuotaItem.Extra["reset_at"]; got != "2026-04-26T13:00:00Z" {
+		t.Fatalf("unexpected 5H reset_at: %v", got)
+	}
+
+	weeklyQuotaItem := mustFindItem(t, items, "账号 Codex Local Week 额度")
+	if weeklyQuotaItem.Value != "80%" {
+		t.Fatalf("unexpected weekly quota value: %s", weeklyQuotaItem.Value)
+	}
+	if got := weeklyQuotaItem.Extra["quota_source"]; got != "codex_wham_usage" {
+		t.Fatalf("unexpected weekly quota source: %v", got)
+	}
+}
+
 func TestLocalCollectorMissingPath(t *testing.T) {
 	collector := NewClaudeLocalCollector(config.LocalCollectorConfig{
 		Paths: []string{filepath.Join(t.TempDir(), "missing")},
