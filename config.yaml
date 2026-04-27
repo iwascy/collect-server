@@ -70,10 +70,13 @@ collectors:
     paths:
       - "${HOME}/.config/claude/projects"
       - "${HOME}/.claude/projects"
-    rate_limit_paths:
-      - "${HOME}/.claude/infohub-rate-limits.json"
-      - "${HOME}/.config/claude/infohub-rate-limits.json"
     mode: "builtin"
+    online:
+      enabled: true  # Read-only OAuth usage query; does not modify Claude Code config.
+      # auth_path: "${HOME}/.claude/.credentials.json"
+      # base_url: "https://api.anthropic.com"
+      # timeout_seconds: 8
+      # stale_after_seconds: 60
     quota:
       plan: "local"
       five_hour_msg_cap: 0

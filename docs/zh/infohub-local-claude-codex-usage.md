@@ -149,10 +149,13 @@ collectors:
     paths:
       - "${HOME}/.config/claude/projects" # Claude Code 新版本默认路径
       - "${HOME}/.claude/projects"        # 旧版本 / 兼容路径
-    rate_limit_paths:                     # statusLine 脚本导出的真实 5H / 7D 额度
-      - "${HOME}/.claude/infohub-rate-limits.json"
-      - "${HOME}/.config/claude/infohub-rate-limits.json"
     mode: "builtin"                        # builtin | ccusage
+    online:
+      enabled: true                         # 只读 OAuth usage API，不修改 Claude Code 配置
+      # auth_path: "${HOME}/.claude/.credentials.json"
+      # base_url: "https://api.anthropic.com"
+      # timeout_seconds: 8
+      # stale_after_seconds: 60
     ccusage_bin: "npx"                     # ccusage 模式可改成绝对路径
     ccusage_args: ["ccusage@latest", "--json"]
     windows:
@@ -173,11 +176,10 @@ collectors:
 1. `Collect()` 触发后：
    - 已实现：`mode=builtin`，扫 `paths` 下的 `*.jsonl`，按 `timestamp` 与 `usage` 聚合；
      SQLite store 下会增量续扫并回放事件表，memory store 下全量扫描
-   - 已实现：`mode=ccusage`，`exec.CommandContext(ctx, ccusage_bin, ccusage_args...)`
+  - 已实现：`mode=ccusage`，`exec.CommandContext(ctx, ccusage_bin, ccusage_args...)`
      拿 stdout，宽容解析输出 JSON 中的 usage rows
-   - 已实现：读取 `rate_limit_paths` 中最新的 Claude Code statusLine JSON，
-     提取 `rate_limits.five_hour.used_percentage` / `resets_at` 与
-     `rate_limits.seven_day.used_percentage` / `resets_at`，作为真实 5H / 7D 剩余额度
+   - 已实现：`online.enabled=true` 时只读 Claude Code OAuth 凭据，调用 Anthropic
+     OAuth usage API，提取真实 5H / 7D 剩余额度
 2. 输出多个 `DataItem`，遵循现有 `Source/Category/Title/Value/Extra` 约定：
 
 | Category | Title | Value 示例 | Extra |
@@ -191,29 +193,20 @@ collectors:
 3. 失败语义：
    - 路径不存在 → `SourceSnapshot.Status=error`，`Error="claude path missing"`
    - ccusage 不可用 → 自动降级到 `builtin` 模式（一次告警日志）
-   - `rate_limit_paths` 不存在 → 只展示本地估算额度；存在但不可解析 → 记录 warn 后继续采集
+   - OAuth 凭据不存在、过期或 API 不可达 → 只展示本地估算额度；记录 warn 后继续采集
 
-#### 5.1.3 Claude Code statusLine 接入
+#### 5.1.3 Claude Code OAuth 额度接入
 
-Claude Code 没有公开的非交互订阅额度查询 API。当前实现使用官方 statusLine
-输入里的 `rate_limits` 字段作为本地真实额度来源。可以把仓库内脚本注册到
-Claude Code 配置中：
+`claude_local.online.enabled=true` 时，InfoHub 参考 cc-switch 的做法，只读
+Claude Code 现有 OAuth 凭据，不修改 `~/.claude/settings.json`：
 
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "/Users/cyan/code/collect-server/scripts/claude-statusline-infohub.sh"
-  }
-}
-```
+1. macOS 优先读取 Keychain：`Claude Code-credentials`
+2. 兜底读取 `${HOME}/.claude/.credentials.json`
+3. 调用 `GET https://api.anthropic.com/api/oauth/usage`
+4. 解析 `five_hour.utilization` / `resets_at` 与 `seven_day.utilization` / `resets_at`
 
-脚本会把 Claude Code 传入的完整 statusLine JSON 写到
-`${CLAUDE_INFOHUB_RATE_LIMIT_PATH:-$HOME/.claude/infohub-rate-limits.json}`。
-InfoHub 每次采集会读取 `rate_limit_paths` 中最新且可解析的文件，并以
-`quota_source=claude_statusline` 输出 5H / Week 额度。若没有 `rate_limits`
-字段，说明当前 Claude Code 会话尚未收到带额度信息的响应，采集器会自动回退到
-`quota.*_msg_cap` 的本地估算。
+成功后 `quota_source=claude_oauth_usage`。InfoHub 不实现 Claude 登录、不刷新 token、
+不写回 Claude Code 凭据或配置文件。
 
 #### 5.1.4 builtin 解析最小算法
 

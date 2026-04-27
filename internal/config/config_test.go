@@ -201,12 +201,6 @@ collectors:
 	if collector.Paths[1] != "${HOME}/.claude/projects" {
 		t.Fatalf("unexpected second claude path: %q", collector.Paths[1])
 	}
-	if len(collector.RateLimitPaths) != 2 {
-		t.Fatalf("unexpected claude rate limit paths: %#v", collector.RateLimitPaths)
-	}
-	if collector.RateLimitPaths[0] != "${HOME}/.claude/infohub-rate-limits.json" {
-		t.Fatalf("unexpected first rate limit path: %q", collector.RateLimitPaths[0])
-	}
 }
 
 func writeTempConfig(t *testing.T, content string) string {

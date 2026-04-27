@@ -95,7 +95,11 @@ func registerCollectors(registry *collector.Registry, logger *slog.Logger, cfg c
 		registry.Register(collector.NewFeishuCollector(cfg.Collectors.Feishu, logger))
 	}
 	if cfg.Collectors.ClaudeLocal.Enabled {
-		registry.Register(collector.NewClaudeLocalCollector(cfg.Collectors.ClaudeLocal, logger))
+		claudeCollector := collector.NewClaudeLocalCollector(cfg.Collectors.ClaudeLocal, logger)
+		if cfg.Collectors.ClaudeLocal.Online.Enabled {
+			claudeCollector.SetClaudeOnlineQuotaClient(collector.NewClaudeOnlineQuotaClient(cfg.Collectors.ClaudeLocal.Online, logger))
+		}
+		registry.Register(claudeCollector)
 	}
 	if cfg.Collectors.CodexLocal.Enabled {
 		codexCollector := collector.NewCodexLocalCollector(cfg.Collectors.CodexLocal, logger)

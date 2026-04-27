@@ -3,6 +3,7 @@ package collector
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"infohub/internal/config"
 )
@@ -197,6 +199,40 @@ func TestCodexOnlineQuotaClientRateLimitShortCircuit(t *testing.T) {
 	}
 }
 
+func TestCodexOnlineQuotaClientTransportErrorDegradesWithoutError(t *testing.T) {
+	var logs bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logs, nil))
+	client := NewCodexOnlineQuotaClient(config.LocalCodexOnlineConfig{
+		AuthPath:       writeTestCodexAuth(t, t.TempDir()),
+		BaseURL:        "https://chatgpt.com",
+		TimeoutSeconds: 1,
+		StaleAfterSec:  60,
+	}, logger)
+	now := time.Date(2026, 4, 27, 9, 0, 0, 0, time.UTC)
+	client.now = func() time.Time { return now }
+	client.httpClient.Transport = failingRoundTripper{}
+
+	_, ok, err := client.FetchRateLimits(context.Background())
+	if err != nil {
+		t.Fatalf("transport error should be degraded for optional online quota, got: %v", err)
+	}
+	if ok {
+		t.Fatal("expected transport error fetch to return ok=false")
+	}
+	if got := client.LastStatus(); got != codexOnlineQuotaStatusTransportError {
+		t.Fatalf("unexpected status: %s", got)
+	}
+	if until := client.breakerUntil; until.Before(now.Add(9 * time.Minute)) {
+		t.Fatalf("expected transport breaker to last about 10 minutes, got until=%s", until)
+	}
+	if strings.Contains(logs.String(), "level=ERROR") {
+		t.Fatalf("transport fallback should not log error level, got: %s", logs.String())
+	}
+	if !strings.Contains(logs.String(), "level=WARN") {
+		t.Fatalf("expected warn log for transport fallback, got: %s", logs.String())
+	}
+}
+
 func TestCodexOnlineQuotaClientCacheHit(t *testing.T) {
 	var hitCount int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -214,6 +250,12 @@ func TestCodexOnlineQuotaClientCacheHit(t *testing.T) {
 	if got := atomic.LoadInt32(&hitCount); got != 1 {
 		t.Fatalf("expected cache hit, got %d requests", got)
 	}
+}
+
+type failingRoundTripper struct{}
+
+func (failingRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, errors.New("network unavailable")
 }
 
 func TestCodexOnlineQuotaClientMissingAuth(t *testing.T) {

@@ -31,6 +31,7 @@ const (
 	defaultCodexOnlineQuotaTimeout    = 8 * time.Second
 	defaultCodexOnlineQuotaStaleAfter = 60 * time.Second
 	defaultCodexOnlineQuotaUserAgent  = "infohub-codex-quota/1.0"
+	codexOnlineTransportBreakerTTL    = 10 * time.Minute
 )
 
 var defaultCodexOnlineQuotaPaths = []string{
@@ -195,13 +196,13 @@ func (c *CodexOnlineQuotaClient) FetchRateLimits(ctx context.Context) (localRate
 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
-			c.openBreaker(codexOnlineQuotaStatusTransportError, 30*time.Second)
+			c.openBreaker(codexOnlineQuotaStatusTransportError, codexOnlineTransportBreakerTTL)
 			c.setStatus(codexOnlineQuotaStatusTransportError)
 			c.logFirstFailure("transport_error")
 			if c.logger != nil {
-				c.logger.Error("codex online quota request failed", "base_url", c.baseURL, "path", path, "error", err)
+				c.logger.Warn("codex online quota request failed", "base_url", c.baseURL, "path", path, "error", err)
 			}
-			return localRateLimits{}, false, err
+			return localRateLimits{}, false, nil
 		}
 
 		switch resp.StatusCode {
@@ -264,7 +265,7 @@ func (c *CodexOnlineQuotaClient) FetchRateLimits(ctx context.Context) (localRate
 			io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
 			_ = resp.Body.Close()
 			if resp.StatusCode >= 500 {
-				c.openBreaker(codexOnlineQuotaStatusTransportError, 30*time.Second)
+				c.openBreaker(codexOnlineQuotaStatusTransportError, codexOnlineTransportBreakerTTL)
 			}
 			c.setStatus(codexOnlineQuotaStatusTransportError)
 			c.logFirstFailure("unexpected_status")

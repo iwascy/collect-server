@@ -30,15 +30,16 @@ const (
 )
 
 type LocalUsageCollector struct {
-	source           string
-	cfg              config.LocalCollectorConfig
-	logger           *slog.Logger
-	now              func() time.Time
-	store            store.LocalUsageStateStore
-	onlineCodexQuota codexOnlineQuotaFetcher
+	source            string
+	cfg               config.LocalCollectorConfig
+	logger            *slog.Logger
+	now               func() time.Time
+	store             store.LocalUsageStateStore
+	onlineClaudeQuota onlineQuotaFetcher
+	onlineCodexQuota  onlineQuotaFetcher
 }
 
-type codexOnlineQuotaFetcher interface {
+type onlineQuotaFetcher interface {
 	FetchRateLimits(context.Context) (localRateLimits, bool, error)
 	LastStatus() string
 }
@@ -107,6 +108,10 @@ func (c *LocalUsageCollector) SetStore(dataStore store.Store) {
 
 func (c *LocalUsageCollector) SetCodexOnlineQuotaClient(client *CodexOnlineQuotaClient) {
 	c.onlineCodexQuota = client
+}
+
+func (c *LocalUsageCollector) SetClaudeOnlineQuotaClient(client *ClaudeOnlineQuotaClient) {
+	c.onlineClaudeQuota = client
 }
 
 func (c *LocalUsageCollector) Collect(ctx context.Context) ([]model.DataItem, error) {
@@ -607,127 +612,6 @@ func extractCodexRateLimit(rateLimits map[string]any, key string) localQuotaObse
 	return observation
 }
 
-func (c *LocalUsageCollector) readClaudeStatusLineRateLimits() (localRateLimits, bool, error) {
-	if c.source != localClaudeSource {
-		return localRateLimits{}, false, nil
-	}
-
-	var (
-		latestLimits localRateLimits
-		latestMTime  time.Time
-		found        bool
-		lastErr      error
-	)
-	for _, path := range expandedLocalPaths(c.cfg.RateLimitPaths) {
-		info, err := os.Stat(path)
-		if err != nil {
-			if !os.IsNotExist(err) {
-				lastErr = fmt.Errorf("stat %s: %w", path, err)
-			}
-			continue
-		}
-		if info.IsDir() {
-			continue
-		}
-
-		content, err := os.ReadFile(path)
-		if err != nil {
-			lastErr = fmt.Errorf("read %s: %w", path, err)
-			continue
-		}
-		limits, ok, err := parseClaudeStatusLineRateLimits(content)
-		if err != nil {
-			lastErr = fmt.Errorf("parse %s: %w", path, err)
-			continue
-		}
-		if !ok {
-			continue
-		}
-		if !found || info.ModTime().After(latestMTime) {
-			latestLimits = limits
-			latestMTime = info.ModTime()
-			found = true
-		}
-	}
-	if found {
-		return latestLimits, true, nil
-	}
-	return localRateLimits{}, false, lastErr
-}
-
-func parseClaudeStatusLineRateLimits(content []byte) (localRateLimits, bool, error) {
-	trimmed := strings.TrimSpace(string(content))
-	if trimmed == "" {
-		return localRateLimits{}, false, nil
-	}
-
-	var decoded any
-	decoder := json.NewDecoder(strings.NewReader(trimmed))
-	decoder.UseNumber()
-	if err := decoder.Decode(&decoded); err != nil {
-		return localRateLimits{}, false, err
-	}
-
-	record, ok := decoded.(map[string]any)
-	if !ok {
-		return localRateLimits{}, false, nil
-	}
-
-	rateLimits := record
-	if nested, ok := firstNestedMap(record, "rate_limits", "rateLimits"); ok {
-		rateLimits = nested
-	}
-
-	limits := localRateLimits{
-		FiveHour: extractClaudeStatusLineRateLimit(rateLimits, "five_hour", "fiveHour", "5h", "primary"),
-		Week:     extractClaudeStatusLineRateLimit(rateLimits, "seven_day", "sevenDay", "7d", "weekly", "week", "secondary"),
-	}
-	return limits, limits.hasAny(), nil
-}
-
-func extractClaudeStatusLineRateLimit(rateLimits map[string]any, keys ...string) localQuotaObservation {
-	limit, ok := firstNestedMap(rateLimits, keys...)
-	if !ok {
-		return localQuotaObservation{}
-	}
-
-	var (
-		used   float64
-		hasUse bool
-	)
-	for _, key := range []string{"used_percentage", "usedPercent", "used_percent", "percent_used", "percentage"} {
-		if value, ok := floatValue(limit[key]); ok {
-			used = value
-			hasUse = true
-			break
-		}
-	}
-	if !hasUse {
-		for _, key := range []string{"remaining_percentage", "remainingPercent", "remaining_percent"} {
-			if value, ok := floatValue(limit[key]); ok {
-				used = 100 - value
-				hasUse = true
-				break
-			}
-		}
-	}
-	if !hasUse {
-		return localQuotaObservation{}
-	}
-
-	observation := localQuotaObservation{
-		OK:          true,
-		UsedPercent: used,
-	}
-	for _, key := range []string{"resets_at", "reset_at", "resetsAt", "resetAt"} {
-		if reset, ok := parseEventTime(limit[key]); ok {
-			observation.ResetAt = reset.Format(time.RFC3339)
-			break
-		}
-	}
-	return observation
-}
-
 func parseCCUsageEvents(payload []byte, fallbackTime time.Time) ([]localUsageEvent, error) {
 	var decoded any
 	decoder := json.NewDecoder(strings.NewReader(string(payload)))
@@ -829,19 +713,21 @@ func (c *LocalUsageCollector) buildItems(ctx context.Context, events []localUsag
 		quotaSourceForWindow["Week"] = "codex_rate_limits"
 	}
 	if c.source == localClaudeSource {
-		limits, ok, err := c.readClaudeStatusLineRateLimits()
-		if err != nil && c.logger != nil {
-			c.logger.Warn("claude statusline quota unavailable", "error", err)
-		}
-		if ok {
-			limits = discardExpiredRateLimits(limits, now)
-			if limits.FiveHour.OK {
-				latestQuota.FiveHour = limits.FiveHour
-				quotaSourceForWindow["5H"] = "claude_statusline"
+		if c.onlineClaudeQuota != nil {
+			onlineLimits, ok, err := c.onlineClaudeQuota.FetchRateLimits(ctx)
+			if err != nil && c.logger != nil {
+				c.logger.Warn("claude online quota unavailable", "error", err)
 			}
-			if limits.Week.OK {
-				latestQuota.Week = limits.Week
-				quotaSourceForWindow["Week"] = "claude_statusline"
+			if ok {
+				onlineLimits = discardExpiredRateLimits(onlineLimits, now)
+				if onlineLimits.FiveHour.OK {
+					latestQuota.FiveHour = onlineLimits.FiveHour
+					quotaSourceForWindow["5H"] = "claude_oauth_usage"
+				}
+				if onlineLimits.Week.OK {
+					latestQuota.Week = onlineLimits.Week
+					quotaSourceForWindow["Week"] = "claude_oauth_usage"
+				}
 			}
 		}
 	}
@@ -967,7 +853,7 @@ func (c *LocalUsageCollector) quotaItem(window localWindow, bucket *localUsageBu
 		quotaSource = strings.TrimSpace(observedSource)
 		if quotaSource == "" {
 			if c.source == localClaudeSource {
-				quotaSource = "claude_statusline"
+				quotaSource = "claude_oauth_usage"
 			} else {
 				quotaSource = "codex_rate_limits"
 			}
