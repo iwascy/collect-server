@@ -18,6 +18,7 @@ type Handler struct {
 	registry             *collector.Registry
 	scheduler            *scheduler.Scheduler
 	dashboardMockEnabled bool
+	dashboardSources     DashboardSources
 }
 
 func NewHandler(store store.Store, registry *collector.Registry, scheduler *scheduler.Scheduler) *Handler {
@@ -26,6 +27,12 @@ func NewHandler(store store.Store, registry *collector.Registry, scheduler *sche
 
 type HandlerOptions struct {
 	DashboardMockEnabled bool
+	DashboardSources     DashboardSources
+}
+
+type DashboardSources struct {
+	Claude string
+	Codex  string
 }
 
 func NewHandlerWithOptions(store store.Store, registry *collector.Registry, scheduler *scheduler.Scheduler, options HandlerOptions) *Handler {
@@ -34,6 +41,7 @@ func NewHandlerWithOptions(store store.Store, registry *collector.Registry, sche
 		registry:             registry,
 		scheduler:            scheduler,
 		dashboardMockEnabled: options.DashboardMockEnabled,
+		dashboardSources:     options.DashboardSources,
 	}
 }
 

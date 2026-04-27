@@ -26,6 +26,15 @@ func (f fakeCollector) Collect(_ context.Context) ([]model.DataItem, error) {
 	return nil, nil
 }
 
+func newTestDashboardHandler(dataStore store.Store) *Handler {
+	return NewHandlerWithOptions(dataStore, collector.NewRegistry(), nil, HandlerOptions{
+		DashboardSources: DashboardSources{
+			Claude: "claude_relay",
+			Codex:  "sub2api",
+		},
+	})
+}
+
 func TestSummaryHandler(t *testing.T) {
 	dataStore := store.NewMemoryStore()
 	if err := dataStore.Save("claude_relay", []model.DataItem{{
@@ -206,7 +215,7 @@ func TestEInkDashboardRendersCustomLayout(t *testing.T) {
 		},
 	})
 
-	handler := NewHandler(dataStore, collector.NewRegistry(), nil)
+	handler := newTestDashboardHandler(dataStore)
 	req := httptest.NewRequest(http.MethodGet, "/dashboard/eink?refresh=600", nil)
 	rec := httptest.NewRecorder()
 	handler.EInkDashboard(rec, req)
@@ -244,7 +253,7 @@ func TestDashboardRouteUsesDedicatedToken(t *testing.T) {
 	dataStore := store.NewMemoryStore()
 	registry := collector.NewRegistry()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	router := NewRouter(dataStore, registry, nil, logger, "api-token", "view-token", false)
+	router := NewRouter(dataStore, registry, nil, logger, "api-token", "view-token", false, DashboardSources{})
 
 	t.Run("rejects missing dashboard token", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/dashboard/eink", nil)
@@ -338,7 +347,7 @@ func TestEInkDashboardDataReturnsStructuredPayload(t *testing.T) {
 		},
 	})
 
-	handler := NewHandler(dataStore, collector.NewRegistry(), nil)
+	handler := newTestDashboardHandler(dataStore)
 	req := httptest.NewRequest(http.MethodGet, "/dashboard/eink.json?refresh=300", nil)
 	rec := httptest.NewRecorder()
 	handler.EInkDashboardData(rec, req)
@@ -477,7 +486,7 @@ func TestEInkDeviceDataReturnsCompactPayload(t *testing.T) {
 		},
 	})
 
-	handler := NewHandler(dataStore, collector.NewRegistry(), nil)
+	handler := newTestDashboardHandler(dataStore)
 	req := httptest.NewRequest(http.MethodGet, "/dashboard/eink/device.json?refresh=180", nil)
 	rec := httptest.NewRecorder()
 	handler.EInkDeviceData(rec, req)
@@ -551,6 +560,148 @@ func TestEInkDeviceDataReturnsCompactPayload(t *testing.T) {
 	}
 }
 
+func TestEInkDashboardUsesConfiguredRemoteSourcesOverLocalFailures(t *testing.T) {
+	dataStore := store.NewMemoryStore()
+	mustSaveSnapshot(t, dataStore, "claude_relay", []model.DataItem{
+		{
+			Source:    "claude_relay",
+			Category:  "token_usage",
+			Title:     "今日 Token 用量",
+			Value:     "1058870",
+			FetchedAt: 1776766339,
+			Extra: map[string]any{
+				"daily_cost":       1.62,
+				"daily_requests":   14,
+				"enabled_accounts": 1,
+			},
+		},
+	})
+	mustSaveSnapshot(t, dataStore, "sub2api", []model.DataItem{
+		{
+			Source:    "sub2api",
+			Category:  "token_usage",
+			Title:     "今日 Token 用量",
+			Value:     "24854435",
+			FetchedAt: 1776766339,
+			Extra: map[string]any{
+				"daily_cost":       13.55,
+				"daily_requests":   394,
+				"enabled_accounts": 5,
+			},
+		},
+	})
+	if err := dataStore.SaveFailure("claude_local", context.DeadlineExceeded, time.Unix(1776767000, 0)); err != nil {
+		t.Fatalf("save claude local failure failed: %v", err)
+	}
+	if err := dataStore.SaveFailure("codex_local", context.DeadlineExceeded, time.Unix(1776767000, 0)); err != nil {
+		t.Fatalf("save codex local failure failed: %v", err)
+	}
+
+	handler := newTestDashboardHandler(dataStore)
+	req := httptest.NewRequest(http.MethodGet, "/dashboard/eink.json", nil)
+	rec := httptest.NewRecorder()
+	handler.EInkDashboardData(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: %d", rec.Code)
+	}
+
+	var dashboardPayload struct {
+		UpdatedAtUnix int64 `json:"updated_at_unix"`
+		Overview      []struct {
+			Kind  string `json:"kind"`
+			Title string `json:"title"`
+			Value string `json:"value"`
+		} `json:"overview"`
+		Device struct {
+			UpdatedAtUnix int64 `json:"updated_at_unix"`
+			Claude        struct {
+				Title string `json:"title"`
+				Value string `json:"value"`
+			} `json:"claude"`
+			Codex struct {
+				Title string `json:"title"`
+				Value string `json:"value"`
+			} `json:"codex"`
+		} `json:"device"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &dashboardPayload); err != nil {
+		t.Fatalf("decode dashboard response failed: %v", err)
+	}
+
+	if dashboardPayload.UpdatedAtUnix != 1776766339 || dashboardPayload.Device.UpdatedAtUnix != 1776766339 {
+		t.Fatalf("dashboard should use remote source timestamps: %+v", dashboardPayload)
+	}
+	if len(dashboardPayload.Overview) < 2 || dashboardPayload.Overview[0].Kind != "claude_relay" || dashboardPayload.Overview[1].Kind != "sub2api" {
+		t.Fatalf("dashboard should prefer remote sources: %+v", dashboardPayload.Overview)
+	}
+	if dashboardPayload.Device.Claude.Title != "Claude Relay 今日概览" || dashboardPayload.Device.Claude.Value != "1,058,870" {
+		t.Fatalf("device should use Claude Relay data: %+v", dashboardPayload.Device.Claude)
+	}
+	if dashboardPayload.Device.Codex.Title != "Codex 今日概览" || dashboardPayload.Device.Codex.Value != "24,854,435" {
+		t.Fatalf("device should use Sub2API data for Codex panel: %+v", dashboardPayload.Device.Codex)
+	}
+}
+
+func TestEInkDashboardDoesNotReadSourcesWithoutConfiguration(t *testing.T) {
+	dataStore := store.NewMemoryStore()
+	mustSaveSnapshot(t, dataStore, "claude_relay", []model.DataItem{
+		{
+			Source:    "claude_relay",
+			Category:  "token_usage",
+			Title:     "今日 Token 用量",
+			Value:     "1058870",
+			FetchedAt: 1776766339,
+		},
+	})
+	mustSaveSnapshot(t, dataStore, "sub2api", []model.DataItem{
+		{
+			Source:    "sub2api",
+			Category:  "token_usage",
+			Title:     "今日 Token 用量",
+			Value:     "24854435",
+			FetchedAt: 1776766339,
+		},
+	})
+
+	handler := NewHandler(dataStore, collector.NewRegistry(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/dashboard/eink/device.json", nil)
+	rec := httptest.NewRecorder()
+	handler.EInkDeviceData(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: %d", rec.Code)
+	}
+
+	var payload struct {
+		UpdatedAtUnix int64 `json:"updated_at_unix"`
+		Claude        struct {
+			Title string `json:"title"`
+			Value string `json:"value"`
+		} `json:"claude"`
+		Codex struct {
+			Title string `json:"title"`
+			Value string `json:"value"`
+		} `json:"codex"`
+		Total struct {
+			Value string `json:"value"`
+		} `json:"total"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response failed: %v", err)
+	}
+
+	if payload.UpdatedAtUnix != 0 {
+		t.Fatalf("dashboard should not read unconfigured source timestamps: %+v", payload)
+	}
+	if payload.Claude.Value != "--" || payload.Codex.Value != "--" || payload.Total.Value != "--" {
+		t.Fatalf("dashboard should not read unconfigured source values: %+v", payload)
+	}
+	if payload.Claude.Title != "未配置数据源" || payload.Codex.Title != "未配置数据源" {
+		t.Fatalf("dashboard should expose unconfigured source titles: %+v", payload)
+	}
+}
+
 func TestEInkDashboardDataPrioritizesLowestRemainingAlert(t *testing.T) {
 	dataStore := store.NewMemoryStore()
 	mustSaveSnapshot(t, dataStore, "claude_relay", []model.DataItem{
@@ -602,7 +753,7 @@ func TestEInkDashboardDataPrioritizesLowestRemainingAlert(t *testing.T) {
 		},
 	})
 
-	handler := NewHandler(dataStore, collector.NewRegistry(), nil)
+	handler := newTestDashboardHandler(dataStore)
 	req := httptest.NewRequest(http.MethodGet, "/dashboard/eink/data.json?refresh=300", nil)
 	rec := httptest.NewRecorder()
 	handler.EInkDashboardData(rec, req)
@@ -685,7 +836,7 @@ func TestEInkDashboardDataPrioritizesClaudeAlertWhenRemainingTies(t *testing.T) 
 		},
 	})
 
-	handler := NewHandler(dataStore, collector.NewRegistry(), nil)
+	handler := newTestDashboardHandler(dataStore)
 	req := httptest.NewRequest(http.MethodGet, "/dashboard/eink.json?refresh=300", nil)
 	rec := httptest.NewRecorder()
 	handler.EInkDashboardData(rec, req)
@@ -760,7 +911,11 @@ func TestEInkDashboardMarksLocalQuotaWithoutCapUnknown(t *testing.T) {
 		},
 	})
 
-	handler := NewHandler(dataStore, collector.NewRegistry(), nil)
+	handler := NewHandlerWithOptions(dataStore, collector.NewRegistry(), nil, HandlerOptions{
+		DashboardSources: DashboardSources{
+			Claude: "claude_local",
+		},
+	})
 	req := httptest.NewRequest(http.MethodGet, "/dashboard/eink.json", nil)
 	rec := httptest.NewRecorder()
 	handler.EInkDashboardData(rec, req)
@@ -898,7 +1053,7 @@ func TestEInkDeviceDataKeepsLastSuccessfulSnapshotOnCollectorFailure(t *testing.
 		t.Fatalf("save failure failed: %v", err)
 	}
 
-	handler := NewHandler(dataStore, collector.NewRegistry(), nil)
+	handler := newTestDashboardHandler(dataStore)
 	req := httptest.NewRequest(http.MethodGet, "/dashboard/eink/device.json?refresh=180", nil)
 	rec := httptest.NewRecorder()
 	handler.EInkDeviceData(rec, req)
