@@ -45,10 +45,10 @@ func TestClaudeOnlineQuotaClientHappyPath(t *testing.T) {
 	if !ok {
 		t.Fatal("expected rate limits")
 	}
-	if limits.FiveHour.UsedPercent != 12.5 {
+	if limits.FiveHour.UsedPercent != 87.5 {
 		t.Fatalf("unexpected 5H used percent: %v", limits.FiveHour.UsedPercent)
 	}
-	if limits.Week.UsedPercent != 45 {
+	if limits.Week.UsedPercent != 55 {
 		t.Fatalf("unexpected weekly used percent: %v", limits.Week.UsedPercent)
 	}
 	if limits.FiveHour.ResetAt != "2026-04-26T13:00:00Z" {

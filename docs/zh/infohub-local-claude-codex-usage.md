@@ -203,7 +203,7 @@ Claude Code 现有 OAuth 凭据，不修改 `~/.claude/settings.json`：
 1. macOS 优先读取 Keychain：`Claude Code-credentials`
 2. 兜底读取 `${HOME}/.claude/.credentials.json`
 3. 调用 `GET https://api.anthropic.com/api/oauth/usage`
-4. 解析 `five_hour.utilization` / `resets_at` 与 `seven_day.utilization` / `resets_at`
+4. 解析 `five_hour.utilization` / `resets_at` 与 `seven_day.utilization` / `resets_at`；Claude OAuth API 的 `utilization` 表示剩余额度百分比，落库时会换算成内部统一的 `used_percent` / `remaining_percent`
 
 成功后 `quota_source=claude_oauth_usage`。InfoHub 不实现 Claude 登录、不刷新 token、
 不写回 Claude Code 凭据或配置文件。

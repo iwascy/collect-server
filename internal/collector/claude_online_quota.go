@@ -331,11 +331,11 @@ func extractClaudeOnlineRateLimit(payload map[string]any, key string) localQuota
 	if !ok {
 		return localQuotaObservation{}
 	}
-	used, ok := floatValue(record["utilization"])
+	remaining, ok := floatValue(record["utilization"])
 	if !ok {
 		return localQuotaObservation{}
 	}
-	observation := localQuotaObservation{OK: true, UsedPercent: used}
+	observation := localQuotaObservation{OK: true, UsedPercent: remainingPercent(remaining)}
 	if reset, ok := parseEventTime(record["resets_at"]); ok {
 		observation.ResetAt = reset.Format(time.RFC3339)
 	}
