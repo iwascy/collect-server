@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"infohub/internal/config"
+	"infohub/internal/model"
 )
 
 func TestSub2APICollectorCollect(t *testing.T) {
@@ -165,6 +166,158 @@ func TestSub2APICollectorCollect(t *testing.T) {
 	if got := mustFindItem(t, items, "账号 openai-b Week 额度").Value; got != "80%" {
 		t.Fatalf("unexpected openai-b week value: %s", got)
 	}
+}
+
+func TestSub2APICollectorCollectTargetsUserAndAccount(t *testing.T) {
+	var todayStatsCalled bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/auth/login":
+			writeJSON(t, w, map[string]any{
+				"code": 0,
+				"data": map[string]any{"access_token": "sub2api-session"},
+			})
+		case "/api/v1/admin/accounts":
+			expectAuthHeader(t, r, "Bearer sub2api-session")
+			writeJSON(t, w, map[string]any{
+				"code": 0,
+				"data": map[string]any{
+					"items": []map[string]any{
+						{
+							"id":          391,
+							"name":        "Pro 20x",
+							"status":      "active",
+							"schedulable": true,
+							"extra": map[string]any{
+								"codex_5h_used_percent": 25,
+								"codex_5h_reset_at":     "2026-05-25T12:00:00Z",
+								"codex_7d_used_percent": 40,
+								"codex_7d_reset_at":     "2026-05-27T00:00:00Z",
+							},
+						},
+						{
+							"id":          392,
+							"name":        "Other Pro",
+							"status":      "active",
+							"schedulable": true,
+							"extra": map[string]any{
+								"codex_5h_used_percent": 99,
+								"codex_7d_used_percent": 99,
+							},
+						},
+					},
+				},
+			})
+		case "/api/v1/admin/usage/search-users":
+			expectAuthHeader(t, r, "Bearer sub2api-session")
+			if got := r.URL.Query().Get("q"); got != "admin@sub2api.cccy.fun" {
+				t.Fatalf("unexpected user search query: %q", got)
+			}
+			writeJSON(t, w, []map[string]any{{
+				"id":    88,
+				"email": "admin@sub2api.cccy.fun",
+			}})
+		case "/api/v1/admin/usage/stats":
+			expectAuthHeader(t, r, "Bearer sub2api-session")
+			expectQueryValues(t, r.URL.Query(), map[string]string{
+				"user_id":  "88",
+				"period":   "today",
+				"timezone": "Asia/Shanghai",
+			})
+			writeJSON(t, w, map[string]any{
+				"total_tokens":       12345,
+				"total_requests":     7,
+				"total_actual_cost":  1.23,
+				"total_account_cost": 2.34,
+			})
+		case "/api/v1/admin/accounts/today-stats/batch":
+			todayStatsCalled = true
+			writeJSON(t, w, map[string]any{
+				"code": 0,
+				"data": map[string]any{"stats": map[string]any{}},
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	collector := NewSub2APICollector(config.HTTPCollectorConfig{
+		TimeoutSeconds: 2,
+		Targets: []config.Sub2APITarget{
+			{
+				Type:  "user",
+				Name:  "admin@sub2api.cccy.fun",
+				Email: "admin@sub2api.cccy.fun",
+			},
+			{
+				Type:  "account",
+				Name:  "Pro 20x",
+				Match: "Pro 20x",
+			},
+		},
+		Service: config.HTTPServiceConfig{
+			BaseURL: server.URL,
+			Endpoints: map[string]string{
+				"accounts":     "/api/v1/admin/accounts",
+				"today_stats":  "/api/v1/admin/accounts/today-stats/batch",
+				"search_users": "/api/v1/admin/usage/search-users",
+				"usage_stats":  "/api/v1/admin/usage/stats",
+			},
+		},
+		Auth: config.HTTPAuthConfig{
+			Type:          "login_json",
+			HeaderName:    "Authorization",
+			TokenPrefix:   "Bearer",
+			LoginEndpoint: "/api/v1/auth/login",
+			Method:        http.MethodPost,
+			TokenPath:     "data.access_token",
+			Credentials: map[string]string{
+				"email":    "admin@example.com",
+				"password": "sub2api-pass",
+			},
+		},
+	}, nil)
+
+	items, err := collector.Collect(context.Background())
+	if err != nil {
+		t.Fatalf("collect failed: %v", err)
+	}
+	if todayStatsCalled {
+		t.Fatal("account today stats should not be called when account target does not include usage")
+	}
+
+	tokenItem := mustFindItem(t, items, "今日 Token 用量")
+	if tokenItem.Value != "12345" {
+		t.Fatalf("unexpected token value: %s", tokenItem.Value)
+	}
+	if got := tokenItem.Extra["enabled_accounts"]; got != 1 {
+		t.Fatalf("unexpected enabled account count: %v", got)
+	}
+	if got := tokenItem.Extra["matched_targets"]; got != 2 {
+		t.Fatalf("unexpected matched target count: %v", got)
+	}
+	if got := mustFindItem(t, items, "admin@sub2api.cccy.fun 今日 Token 用量").Value; got != "12345" {
+		t.Fatalf("unexpected user token item: %s", got)
+	}
+	if got := mustFindItem(t, items, "账号 Pro 20x 5H 额度").Value; got != "75%" {
+		t.Fatalf("unexpected Pro 20x 5H value: %s", got)
+	}
+	if got := mustFindItem(t, items, "账号 Pro 20x Week 额度").Value; got != "60%" {
+		t.Fatalf("unexpected Pro 20x Week value: %s", got)
+	}
+	if hasItem(items, "账号 Other Pro 5H 额度") {
+		t.Fatal("unexpected quota item for unmatched account")
+	}
+}
+
+func hasItem(items []model.DataItem, title string) bool {
+	for _, item := range items {
+		if item.Title == title {
+			return true
+		}
+	}
+	return false
 }
 
 func expectQueryValues(t *testing.T, values url.Values, expected map[string]string) {

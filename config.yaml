@@ -45,6 +45,17 @@ collectors:
       endpoints:
         accounts: "/api/v1/admin/accounts"
         today_stats: "/api/v1/admin/accounts/today-stats/batch"
+        search_users: "/api/v1/admin/usage/search-users"
+        usage_stats: "/api/v1/admin/usage/stats"
+    targets:
+      - type: "user"
+        name: "admin@sub2api.cccy.fun"
+        email: "admin@sub2api.cccy.fun"
+        include_usage: true
+      - type: "account"
+        name: "Pro 20x"
+        match: "Pro 20x"
+        include_quota: true
     auth:
       type: "login_json"
       header_name: "Authorization"

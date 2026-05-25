@@ -65,11 +65,22 @@ type HTTPCollectorConfig struct {
 	Cron           string            `yaml:"cron"`
 	Service        HTTPServiceConfig `yaml:"service"`
 	Auth           HTTPAuthConfig    `yaml:"auth"`
+	Targets        []Sub2APITarget   `yaml:"targets"`
 	BaseURL        string            `yaml:"base_url"`
 	Endpoint       string            `yaml:"endpoint"`
 	APIKey         string            `yaml:"api_key"`
 	TimeoutSeconds int               `yaml:"timeout_seconds"`
 	Headers        map[string]string `yaml:"headers"`
+}
+
+type Sub2APITarget struct {
+	Type         string `yaml:"type"`
+	ID           string `yaml:"id"`
+	Name         string `yaml:"name"`
+	Match        string `yaml:"match"`
+	Email        string `yaml:"email"`
+	IncludeUsage bool   `yaml:"include_usage"`
+	IncludeQuota bool   `yaml:"include_quota"`
 }
 
 type HTTPServiceConfig struct {
